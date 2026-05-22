@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 공통 함수
+    function isAuth() { return request.auth != null; }
+    function isOwner(uid) { return request.auth.uid == uid; }
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    function isAdmin() { return isAuth() && getRole() == "admin"; }
+    function isStudent() { return isAuth() && getRole() == "student"; }
+    function isCompany() { return isAuth() && getRole() == "company"; }
+    function isApproved() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isApproved == true;
+    }
+
+    // users 컬렉션
+    match /users/{uid} {
+      allow read: if isAuth();
+      allow create: if isAuth() && isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 학생 프로필
+    match /studentProfiles/{uid} {
+      allow read: if true; // 공개 프로필은 비회원도 읽기 가능
+      allow write: if isOwner(uid) || isAdmin();
+    }
+
+    // 작품
+    match /works/{workId} {
+      allow read: if
+        resource.data.isPublic == true ||
+        (isAuth() && isOwner(resource.data.authorUid)) ||
+        isAdmin();
+      allow create: if isStudent() && isApproved();
+      allow update: if isOwner(resource.data.authorUid) || isAdmin();
+      allow delete: if isOwner(resource.data.authorUid) || isAdmin();
+    }
+
+    // 채용 제안
+    match /offers/{offerId} {
+      allow read: if
+        isOwner(resource.data.fromCompanyUid) ||
+        isOwner(resource.data.toStudentUid) ||
+        isAdmin();
+      allow create: if isCompany() && isApproved();
+      allow update: if
+        isOwner(resource.data.toStudentUid) || // 학생: 수락/거절
+        isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}
