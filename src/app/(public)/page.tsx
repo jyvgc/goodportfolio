@@ -26,6 +26,7 @@ export default function HomePage() {
   const [heroTitle, setHeroTitle] = useState("당신의");
   const [heroSubtitle, setHeroSubtitle] = useState("작품을");
   const [heroTagline, setHeroTagline] = useState("세상에.");
+  const [heroDescription, setHeroDescription] = useState("웹툰 · 게임콘텐츠 학생들의 포트폴리오를 전시하고 산업체 인사 담당자와 직접 연결되는 플랫폼");
   const [heroType, setHeroType] = useState<"grid" | "slide">("grid");
   const [borderRadius, setBorderRadius] = useState<"rounded" | "square">("rounded");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
@@ -53,6 +54,7 @@ export default function HomePage() {
           if (d.heroTitle) setHeroTitle(d.heroTitle);
           if (d.heroSubtitle) setHeroSubtitle(d.heroSubtitle);
           if (d.heroTagline) setHeroTagline(d.heroTagline);
+          if (d.heroDescription) setHeroDescription(d.heroDescription);
           if (d.heroType) setHeroType(d.heroType);
           if (d.borderRadius) setBorderRadius(d.borderRadius);
         }
@@ -61,7 +63,6 @@ export default function HomePage() {
     fetchAll();
   }, []);
 
-  // 슬라이드 자동 전환
   useEffect(() => {
     if (heroType === "slide" && gridImages.length > 1) {
       slideTimer.current = setInterval(() => setSlideIndex((prev) => (prev + 1) % gridImages.length), 3000);
@@ -87,19 +88,17 @@ export default function HomePage() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: 60, alignItems: "start" }} className="hero-grid">
-            {/* 왼쪽 */}
             <div>
-              <h1 style={{ fontSize: "clamp(2.5rem, 5vw, 5rem)", fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.02em", marginBottom: 32 }}>
+              <h1 style={{ fontSize: "clamp(2.5rem, 5vw, 5rem)", fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.02em", marginBottom: 24 }}>
                 <span style={{ display: "block", color: "#f0f0ff" }}>{heroTitle}</span>
                 <span style={{ display: "block", background: "linear-gradient(135deg, #6366f1, #22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{heroSubtitle}</span>
                 <span style={{ display: "block", color: "#f0f0ff" }}>{heroTagline}</span>
               </h1>
-              <p style={{ color: "#9999bb", fontSize: 17, lineHeight: 1.7, marginBottom: 40, maxWidth: 400 }}>
-                웹툰 · 게임콘텐츠 학생들의 포트폴리오를 전시하고 산업체 인사 담당자와 직접 연결되는 플랫폼
+              <p style={{ color: "#9999bb", fontSize: 17, lineHeight: 1.7, marginBottom: 40, maxWidth: 420 }}>
+                {heroDescription}
               </p>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 56 }}>
                 <Link href="/gallery" style={{ background: "#6366f1", color: "white", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>포트폴리오 보기 →</Link>
-                {/* 로그인 전에만 회원가입 버튼 표시 */}
                 {!firebaseUser && (
                   <Link href="/register" style={{ border: "1px solid #3d3d52", color: "#9999bb", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>회원가입</Link>
                 )}
@@ -114,7 +113,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 오른쪽 — 히어로 이미지 */}
+            {/* 히어로 이미지 */}
             {heroType === "grid" ? (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(3, 160px)", gap: 10 }}>
                 <div style={{ gridColumn: "1 / span 2", gridRow: "1 / span 2", borderRadius: br, overflow: "hidden", background: "#1a1a24", border: "1px solid #2e2e3f" }}>
@@ -127,14 +126,12 @@ export default function HomePage() {
                 ))}
               </div>
             ) : (
-              /* 슬라이드 */
               <div style={{ position: "relative", borderRadius: br, overflow: "hidden", height: 480, background: "#1a1a24", border: "1px solid #2e2e3f" }}>
                 {gridImages.length > 0 ? (
                   <img src={gridImages[slideIndex]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "opacity 0.5s" }} />
                 ) : (
                   <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.2, fontSize: 64 }}>🎨</div>
                 )}
-                {/* 슬라이드 인디케이터 */}
                 {gridImages.length > 1 && (
                   <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }}>
                     {gridImages.map((_, i) => (
