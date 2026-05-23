@@ -6,6 +6,7 @@ import Footer from "@/components/layout/Footer";
 import { collection, query, where, orderBy, limit, getDocs, getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuthStore } from "@/store/authStore";
+import Script from "next/script";
 
 const DEFAULT_STATS = [
   { value: "120+", label: "등록 학생" },
@@ -90,8 +91,34 @@ export default function HomePage() {
     borderRadius: br, overflow: "hidden", background: "#1a1a24", border: `1px solid ${bc}`, ...extra
   });
 
+  // 구조화 데이터 (JSON-LD)
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "GoodPortfolio",
+    "url": "https://goodportfolio-five.vercel.app",
+    "description": "구미대학교 웹툰·게임콘텐츠 학생 포트폴리오 플랫폼",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://goodportfolio-five.vercel.app/gallery?q={search_term_string}",
+      "query-input": "required name=search_term_string",
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "구미대학교 GoodPortfolio",
+      "url": "https://goodportfolio-five.vercel.app",
+    },
+  };
+
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#0a0a0f", color: "#f0f0ff" }}>
+      {/* 구조화 데이터 */}
+      <Script
+        id="json-ld"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <Navbar />
 
       {/* ── 히어로 ── */}
@@ -125,16 +152,16 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 히어로 이미지 — 클릭 시 갤러리로 */}
+            {/* 히어로 이미지 — 클릭 시 갤러리 */}
             <Link href="/gallery" style={{ textDecoration: "none", display: "block" }}>
               {heroType === "grid" && (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(3, 160px)", gap: 10 }}>
                   <div style={{ ...cardStyle(), gridColumn: "1 / span 2", gridRow: "1 / span 2" }}>
-                    {gridImages[0] ? <img src={gridImages[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, fontSize: 48 }}>🎨</div>}
+                    {gridImages[0] ? <img src={gridImages[0]} alt="포트폴리오 작품" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, fontSize: 48 }}>🎨</div>}
                   </div>
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} style={{ ...cardStyle(), gridColumn: i === 4 ? "2 / span 2" : undefined }}>
-                      {gridImages[i] ? <img src={gridImages[i]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
+                      {gridImages[i] ? <img src={gridImages[i]} alt={`포트폴리오 작품 ${i}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
                     </div>
                   ))}
                 </div>
@@ -143,7 +170,7 @@ export default function HomePage() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
                   {Array.from({ length: 9 }).map((_, i) => (
                     <div key={i} style={{ ...cardStyle(), aspectRatio: "1" }}>
-                      {gridImages[i] ? <img src={gridImages[i]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
+                      {gridImages[i] ? <img src={gridImages[i]} alt={`포트폴리오 작품 ${i}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
                     </div>
                   ))}
                 </div>
@@ -151,7 +178,7 @@ export default function HomePage() {
               {heroType === "slide" && (
                 <div style={{ position: "relative", ...cardStyle({ height: 480 }) }}>
                   {gridImages.length > 0
-                    ? <img src={gridImages[slideIndex]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "opacity 0.5s" }} />
+                    ? <img src={gridImages[slideIndex]} alt="포트폴리오 슬라이드" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "opacity 0.5s" }} />
                     : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.2, fontSize: 64 }}>🎨</div>}
                   {gridImages.length > 1 && (
                     <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }} onClick={(e) => e.preventDefault()}>
@@ -167,7 +194,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 공지사항 (첫화면에만) ── */}
+      {/* 공지사항 */}
       {notices.length > 0 && (
         <section style={{ background: "#111118", borderTop: "1px solid #1a1a24", borderBottom: "1px solid #1a1a24" }}>
           <div style={{ maxWidth: mw, margin: "0 auto", padding: "24px 24px" }}>
@@ -190,7 +217,7 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* ── 갤러리 ── */}
+      {/* 갤러리 */}
       <section style={{ maxWidth: mw, margin: "0 auto", padding: "80px 24px" }}>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 48, flexWrap: "wrap", gap: 16 }}>
           <div>
@@ -237,7 +264,7 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* ── How It Works ── */}
+      {/* How It Works */}
       <section style={{ background: "#111118", borderTop: `1px solid ${bc}`, borderBottom: `1px solid ${bc}` }}>
         <div style={{ maxWidth: mw, margin: "0 auto", padding: "80px 24px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -262,7 +289,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── CTA ── */}
+      {/* CTA */}
       <section style={{ maxWidth: mw, margin: "0 auto", padding: "80px 24px" }}>
         <div style={{ background: "#111118", border: `1px solid ${bc}`, borderRadius: br + 8, padding: "80px 40px", textAlign: "center", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
