@@ -55,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko">
       <head>
+        <meta name="google-site-verification" content="7kbFrPl_gIIbbl5JdfsNWEtHLbxBlLx70vnBUmDsi-g" />
         <link rel="preconnect" href="https://cdn.jsdelivr.net" />
         <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet" />
         <link rel="icon" href="/favicon.ico" />
