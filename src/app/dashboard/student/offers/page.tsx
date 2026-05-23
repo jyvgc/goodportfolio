@@ -7,6 +7,18 @@ import { getOffersForStudent, respondToOffer } from "@/lib/firestore";
 import type { Offer } from "@/types";
 import toast from "react-hot-toast";
 
+
+const statusMap: any = {
+  pending:        { label: "대기 중",        color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
+  pending_admin:  { label: "검토 중",        color: "#818cf8", bg: "rgba(129,140,248,0.1)" },
+  admin_rejected: { label: "제안 거절됨",    color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
+  accepted:       { label: "수락",           color: "#10b981", bg: "rgba(16,185,129,0.1)" },
+  declined:       { label: "거절",           color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
+};
+
+
+
+
 export default function OffersPage() {
   const router = useRouter();
   const { firebaseUser, loading } = useAuthStore();
