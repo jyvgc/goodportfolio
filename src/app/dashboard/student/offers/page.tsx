@@ -7,17 +7,16 @@ import { getOffersForStudent, respondToOffer } from "@/lib/firestore";
 import type { Offer } from "@/types";
 import toast from "react-hot-toast";
 
-
-const statusMap: any = {
-  pending:        { label: "대기 중",        color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-  pending_admin:  { label: "검토 중",        color: "#818cf8", bg: "rgba(129,140,248,0.1)" },
-  admin_rejected: { label: "제안 거절됨",    color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
-  accepted:       { label: "수락",           color: "#10b981", bg: "rgba(16,185,129,0.1)" },
-  declined:       { label: "거절",           color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
+const getStatusLabel = (status: string) => {
+  const map: Record<string, { label: string; color: string; bg: string }> = {
+    pending:        { label: "대기 중",     color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
+    pending_admin:  { label: "검토 중",     color: "#818cf8", bg: "rgba(129,140,248,0.1)" },
+    admin_rejected: { label: "제안 거절됨", color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
+    accepted:       { label: "수락",        color: "#10b981", bg: "rgba(16,185,129,0.1)" },
+    declined:       { label: "거절",        color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
+  };
+  return map[status] ?? { label: status || "알 수 없음", color: "#55556e", bg: "rgba(85,85,110,0.1)" };
 };
-
-
-
 
 export default function OffersPage() {
   const router = useRouter();
@@ -37,21 +36,12 @@ export default function OffersPage() {
     toast.success(status === "accepted" ? "제안을 수락했습니다!" : "제안을 거절했습니다.");
   };
 
-  const statusLabel = (status: string) => {
-    if (status === "pending")  return { label: "미응답", color: "#f59e0b", bg: "rgba(245,158,11,0.1)" };
-    if (status === "accepted") return { label: "수락",   color: "#10b981", bg: "rgba(16,185,129,0.1)" };
-    return                            { label: "거절",   color: "#ef4444", bg: "rgba(239,68,68,0.1)" };
-  };
-
   if (loading) return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center", color: "#818cf8" }}>
-      로딩 중...
-    </div>
+    <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center", color: "#818cf8" }}>로딩 중...</div>
   );
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#f0f0ff" }}>
-      {/* 상단 바 */}
       <div style={{ background: "#111118", borderBottom: "1px solid #2e2e3f", padding: "16px 24px" }}>
         <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", alignItems: "center", gap: 12 }}>
           <Link href="/dashboard/student" style={{ color: "#55556e", textDecoration: "none", fontSize: 14 }}>← 대시보드</Link>
@@ -73,27 +63,20 @@ export default function OffersPage() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {offers.map((offer) => {
-              const s = statusLabel(offer.status);
+              const s = getStatusLabel(offer.status);
               return (
-                <div key={offer.id} style={{
-                  background: "#111118", border: "1px solid #2e2e3f",
-                  borderRadius: 16, padding: 24,
-                }}>
+                <div key={offer.id} style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, padding: 24 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{offer.jobTitle}</div>
                       <div style={{ color: "#9999bb", fontSize: 14 }}>{offer.employmentType}</div>
                     </div>
-                    <span style={{
-                      padding: "4px 14px", borderRadius: 999, fontSize: 12, fontWeight: 600,
-                      background: s.bg, color: s.color,
-                    }}>{s.label}</span>
+                    <span style={{ padding: "4px 14px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: s.bg, color: s.color }}>
+                      {s.label}
+                    </span>
                   </div>
 
-                  <div style={{
-                    background: "#1a1a24", borderRadius: 12, padding: 16,
-                    color: "#9999bb", fontSize: 14, lineHeight: 1.6, marginBottom: 16,
-                  }}>
+                  <div style={{ background: "#1a1a24", borderRadius: 12, padding: 16, color: "#9999bb", fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
                     {offer.message}
                   </div>
 
@@ -109,6 +92,10 @@ export default function OffersPage() {
                         border: "1px solid rgba(239,68,68,0.3)", cursor: "pointer",
                       }}>✕ 거절하기</button>
                     </div>
+                  )}
+
+                  {offer.status === "pending_admin" && (
+                    <p style={{ color: "#818cf8", fontSize: 13 }}>ℹ️ 관리자 검토 중입니다. 승인 후 수락/거절이 가능합니다.</p>
                   )}
                 </div>
               );
