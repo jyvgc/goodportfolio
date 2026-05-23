@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    // google: "구글 서치 콘솔 인증 코드 (나중에 추가)",
+    // google: "7kbFrPl_gIIbbl5JdfsNWEtHLbxBlLx70vnBUmDsi-g",
   },
 };
 
