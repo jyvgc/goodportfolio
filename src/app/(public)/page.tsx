@@ -16,11 +16,13 @@ const DEFAULT_STATS = [
 const CATEGORIES = ["ALL", "웹툰", "게임아트", "캐릭터", "배경", "UI/UX", "3D"];
 
 interface Work { id: string; title: string; category: string; images: string[]; authorUid: string; tools: string[]; viewCount: number; }
+interface Notice { id: string; title: string; content: string; }
 
 export default function HomePage() {
   const { firebaseUser } = useAuthStore();
   const [works, setWorks] = useState<Work[]>([]);
   const [heroImages, setHeroImages] = useState<string[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
   const [stats, setStats] = useState(DEFAULT_STATS);
   const [ctaText, setCtaText] = useState("학교 이메일로 가입하고 무료로 시작하세요");
   const [heroTitle, setHeroTitle] = useState("당신의");
@@ -39,11 +41,15 @@ export default function HomePage() {
     const fetchAll = async () => {
       try {
         const wq = query(collection(db, "works"), where("isPublic", "==", true), orderBy("createdAt", "desc"), limit(12));
-        const wSnap = await getDocs(wq);
+        const [wSnap, hSnap, sSnap, nSnap] = await Promise.all([
+          getDocs(wq),
+          getDocs(collection(db, "heroImages")),
+          getDoc(doc(db, "settings", "main")),
+          getDocs(query(collection(db, "notices"), orderBy("createdAt", "desc"), limit(3))),
+        ]);
         setWorks(wSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Work)));
-        const hSnap = await getDocs(collection(db, "heroImages"));
         setHeroImages(hSnap.docs.map((d) => d.data().url as string));
-        const sSnap = await getDoc(doc(db, "settings", "main"));
+        setNotices(nSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Notice)));
         if (sSnap.exists()) {
           const d = sSnap.data();
           if (d.stats) setStats([
@@ -80,13 +86,8 @@ export default function HomePage() {
   const bc = borderColor === "transparent" ? "transparent" : borderColor;
   const mw = maxWidth === "100%" ? "100%" : `${maxWidth}px`;
 
-  const imgStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
-    width: "100%", height: "100%", objectFit: "cover", ...extra
-  });
-
-  const cardBase = (extra?: React.CSSProperties): React.CSSProperties => ({
-    borderRadius: br, overflow: "hidden", background: "#1a1a24",
-    border: `1px solid ${bc}`, ...extra
+  const cardStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
+    borderRadius: br, overflow: "hidden", background: "#1a1a24", border: `1px solid ${bc}`, ...extra
   });
 
   return (
@@ -96,7 +97,6 @@ export default function HomePage() {
       {/* ── 히어로 ── */}
       <section style={{ minHeight: "100vh", paddingTop: 80, position: "relative", overflow: "hidden", background: "linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%)" }}>
         <div style={{ position: "absolute", top: "30%", left: "40%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
-
         <div style={{ maxWidth: mw, margin: "0 auto", padding: "60px 24px 40px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
             <div style={{ width: 32, height: 1, background: "#6366f1" }} />
@@ -113,9 +113,7 @@ export default function HomePage() {
               <p style={{ color: "#9999bb", fontSize: 17, lineHeight: 1.7, marginBottom: 40, maxWidth: 420 }}>{heroDescription}</p>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 56 }}>
                 <Link href="/gallery" style={{ background: "#6366f1", color: "white", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>포트폴리오 보기 →</Link>
-                {!firebaseUser && (
-                  <Link href="/register" style={{ border: "1px solid #3d3d52", color: "#9999bb", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>회원가입</Link>
-                )}
+                {!firebaseUser && <Link href="/register" style={{ border: "1px solid #3d3d52", color: "#9999bb", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>회원가입</Link>}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, borderTop: "1px solid #2e2e3f", paddingTop: 32 }}>
                 {stats.map((s) => (
@@ -127,51 +125,70 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 히어로 이미지 영역 */}
-            {heroType === "grid" && (
-              /* 비대칭 그리드 */
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(3, 160px)", gap: 10 }}>
-                <div style={{ ...cardBase(), gridColumn: "1 / span 2", gridRow: "1 / span 2" }}>
-                  {gridImages[0] ? <img src={gridImages[0]} alt="" style={imgStyle()} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, fontSize: 48 }}>🎨</div>}
+            {/* 히어로 이미지 — 클릭 시 갤러리로 */}
+            <Link href="/gallery" style={{ textDecoration: "none", display: "block" }}>
+              {heroType === "grid" && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(3, 160px)", gap: 10 }}>
+                  <div style={{ ...cardStyle(), gridColumn: "1 / span 2", gridRow: "1 / span 2" }}>
+                    {gridImages[0] ? <img src={gridImages[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, fontSize: 48 }}>🎨</div>}
+                  </div>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} style={{ ...cardStyle(), gridColumn: i === 4 ? "2 / span 2" : undefined }}>
+                      {gridImages[i] ? <img src={gridImages[i]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
+                    </div>
+                  ))}
                 </div>
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} style={{ ...cardBase(), gridColumn: i === 4 ? "2 / span 2" : undefined }}>
-                    {gridImages[i] ? <img src={gridImages[i]} alt="" style={imgStyle()} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {heroType === "square" && (
-              /* 정사각형 그리드 */
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <div key={i} style={{ ...cardBase(), aspectRatio: "1" }}>
-                    {gridImages[i] ? <img src={gridImages[i]} alt="" style={imgStyle()} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {heroType === "slide" && (
-              /* 슬라이드 */
-              <div style={{ position: "relative", ...cardBase({ height: 480 }) }}>
-                {gridImages.length > 0
-                  ? <img src={gridImages[slideIndex]} alt="" style={imgStyle({ transition: "opacity 0.5s" })} />
-                  : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.2, fontSize: 64 }}>🎨</div>
-                }
-                {gridImages.length > 1 && (
-                  <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }}>
-                    {gridImages.map((_, i) => (
-                      <button key={i} onClick={() => setSlideIndex(i)} style={{ width: i === slideIndex ? 20 : 6, height: 6, borderRadius: 999, background: i === slideIndex ? "#6366f1" : "rgba(255,255,255,0.3)", border: "none", cursor: "pointer", transition: "all 0.3s", padding: 0 }} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+              {heroType === "square" && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <div key={i} style={{ ...cardStyle(), aspectRatio: "1" }}>
+                      {gridImages[i] ? <img src={gridImages[i]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {heroType === "slide" && (
+                <div style={{ position: "relative", ...cardStyle({ height: 480 }) }}>
+                  {gridImages.length > 0
+                    ? <img src={gridImages[slideIndex]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "opacity 0.5s" }} />
+                    : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.2, fontSize: 64 }}>🎨</div>}
+                  {gridImages.length > 1 && (
+                    <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }} onClick={(e) => e.preventDefault()}>
+                      {gridImages.map((_, i) => (
+                        <button key={i} onClick={(e) => { e.preventDefault(); setSlideIndex(i); }} style={{ width: i === slideIndex ? 20 : 6, height: 6, borderRadius: 999, background: i === slideIndex ? "#6366f1" : "rgba(255,255,255,0.3)", border: "none", cursor: "pointer", transition: "all 0.3s", padding: 0 }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Link>
           </div>
         </div>
       </section>
+
+      {/* ── 공지사항 (첫화면에만) ── */}
+      {notices.length > 0 && (
+        <section style={{ background: "#111118", borderTop: "1px solid #1a1a24", borderBottom: "1px solid #1a1a24" }}>
+          <div style={{ maxWidth: mw, margin: "0 auto", padding: "24px 24px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+              <div style={{ width: 24, height: 1, background: "#6366f1" }} />
+              <span style={{ color: "#818cf8", fontSize: 11, fontWeight: 600, letterSpacing: "0.15em", textTransform: "uppercase" }}>공지사항</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {notices.map((n) => (
+                <div key={n.id} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <span style={{ color: "#6366f1", fontSize: 12, marginTop: 2, flexShrink: 0 }}>▪</span>
+                  <div>
+                    <span style={{ color: "#9999bb", fontSize: 13, fontWeight: 600 }}>{n.title}</span>
+                    {n.content && <p style={{ color: "#55556e", fontSize: 12, marginTop: 2 }}>{n.content.length > 80 ? n.content.slice(0, 80) + "..." : n.content}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── 갤러리 ── */}
       <section style={{ maxWidth: mw, margin: "0 auto", padding: "80px 24px" }}>
@@ -203,11 +220,11 @@ export default function HomePage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
             {filtered.slice(0, 8).map((w) => (
               <Link key={w.id} href={`/work/${w.id}`} style={{ textDecoration: "none" }}>
-                <div style={{ ...cardBase({ background: "#111118" }), transition: "all 0.3s", cursor: "pointer" }}
+                <div style={{ background: "#111118", border: `1px solid ${bc}`, borderRadius: br, overflow: "hidden", cursor: "pointer", transition: "all 0.3s" }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 40px rgba(99,102,241,0.2)"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}>
                   <div style={{ aspectRatio: "1", background: "#1a1a24", overflow: "hidden" }}>
-                    {w.images?.[0] ? <img src={w.images[0]} alt={w.title} style={imgStyle()} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🎨</div>}
+                    {w.images?.[0] ? <img src={w.images[0]} alt={w.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🎨</div>}
                   </div>
                   <div style={{ padding: 14 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#f0f0ff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.title}</div>
@@ -234,7 +251,7 @@ export default function HomePage() {
               { step: "02", icon: "🔍", title: "기업이 발견", desc: "산업체 인사 담당자가 갤러리에서 당신의 작품을 발견합니다" },
               { step: "03", icon: "💼", title: "채용 연결", desc: "채용 제안을 받고 꿈의 기업에 지원하세요" },
             ].map((item) => (
-              <div key={item.step} style={{ ...cardBase({ background: "#1a1a24", padding: 32, position: "relative" }) }}>
+              <div key={item.step} style={{ background: "#1a1a24", border: `1px solid ${bc}`, borderRadius: br, padding: 32, position: "relative", overflow: "hidden" }}>
                 <div style={{ position: "absolute", top: 16, right: 20, fontSize: 56, fontWeight: 900, color: "#2e2e3f" }}>{item.step}</div>
                 <div style={{ fontSize: 36, marginBottom: 16 }}>{item.icon}</div>
                 <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>{item.title}</div>
@@ -247,7 +264,7 @@ export default function HomePage() {
 
       {/* ── CTA ── */}
       <section style={{ maxWidth: mw, margin: "0 auto", padding: "80px 24px" }}>
-        <div style={{ ...cardBase({ background: "#111118", padding: "80px 40px", textAlign: "center", position: "relative" }) }}>
+        <div style={{ background: "#111118", border: `1px solid ${bc}`, borderRadius: br + 8, padding: "80px 40px", textAlign: "center", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
           <div style={{ position: "relative", zIndex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 24 }}>

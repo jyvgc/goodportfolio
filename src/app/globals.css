@@ -2,106 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
-
 @layer base {
-  * {
-    box-sizing: border-box;
-  }
-  html {
-    scroll-behavior: smooth;
-  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
     background-color: #0a0a0f;
     color: #f0f0ff;
     font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  /* 스크롤바 스타일 */
-  ::-webkit-scrollbar {
-    width: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: #111118;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #3d3d52;
-    border-radius: 3px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #6366f1;
-  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #111118; }
+  ::-webkit-scrollbar-thumb { background: #3d3d52; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #6366f1; }
 }
 
 @layer components {
-  /* 버튼 */
   .btn-primary {
-    @apply relative overflow-hidden bg-accent-500 hover:bg-accent-600
+    @apply relative overflow-hidden bg-indigo-500 hover:bg-indigo-600
            text-white font-semibold px-6 py-2.5 rounded-lg
-           transition-all duration-300 hover:shadow-glow
+           transition-all duration-300
            disabled:opacity-40 disabled:cursor-not-allowed;
   }
   .btn-outline {
-    @apply border border-dark-500 hover:border-accent-500
-           text-text-secondary hover:text-text-primary
-           font-semibold px-6 py-2.5 rounded-lg
-           transition-all duration-300;
+    @apply border border-gray-600 hover:border-indigo-500
+           text-gray-400 hover:text-gray-100
+           font-semibold px-6 py-2.5 rounded-lg transition-all duration-300;
   }
-  .btn-ghost {
-    @apply text-text-secondary hover:text-text-primary
-           px-4 py-2 rounded-lg transition-colors duration-200
-           hover:bg-dark-700;
-  }
-
-  /* 인풋 */
   .input-base {
-    @apply w-full bg-dark-700 border border-dark-500
-           text-text-primary placeholder-text-muted
+    @apply w-full bg-gray-900 border border-gray-700
+           text-gray-100 placeholder-gray-600
            rounded-lg px-4 py-2.5 text-sm
-           focus:outline-none focus:border-accent-500
-           focus:ring-1 focus:ring-accent-500/50
+           focus:outline-none focus:border-indigo-500
            transition-all duration-200;
   }
-
-  /* 카드 */
   .card {
-    @apply bg-dark-800 rounded-xl border border-dark-500
-           shadow-card transition-all duration-300;
-  }
-  .card-hover {
-    @apply hover:border-accent-500/50 hover:shadow-card-hover
-           hover:-translate-y-1;
-  }
-
-  /* 배지 */
-  .badge {
-    @apply text-xs font-medium px-2.5 py-0.5 rounded-full;
-  }
-  .badge-accent {
-    @apply bg-accent-500/20 text-accent-400 border border-accent-500/30;
-  }
-  .badge-cyan {
-    @apply bg-cyan-500/20 text-cyan-400 border border-cyan-500/30;
-  }
-  .badge-gray {
-    @apply bg-dark-600 text-text-secondary border border-dark-500;
-  }
-
-  /* 섹션 */
-  .section-title {
-    @apply text-2xl font-bold text-text-primary mb-2;
-  }
-  .section-subtitle {
-    @apply text-text-secondary text-sm mb-8;
-  }
-
-  /* 구분선 */
-  .divider {
-    @apply border-t border-dark-500;
-  }
-
-  /* 그라디언트 텍스트 */
-  .gradient-text {
-    @apply bg-clip-text text-transparent bg-accent-gradient;
+    @apply bg-gray-900 rounded-xl border border-gray-700
+           transition-all duration-300;
   }
 }
