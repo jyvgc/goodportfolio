@@ -27,8 +27,10 @@ export default function HomePage() {
   const [heroSubtitle, setHeroSubtitle] = useState("작품을");
   const [heroTagline, setHeroTagline] = useState("세상에.");
   const [heroDescription, setHeroDescription] = useState("웹툰 · 게임콘텐츠 학생들의 포트폴리오를 전시하고 산업체 인사 담당자와 직접 연결되는 플랫폼");
-  const [heroType, setHeroType] = useState<"grid" | "slide">("grid");
+  const [heroType, setHeroType] = useState<"grid" | "slide" | "square">("grid");
   const [borderRadius, setBorderRadius] = useState<"rounded" | "square">("rounded");
+  const [borderColor, setBorderColor] = useState("#2e2e3f");
+  const [maxWidth, setMaxWidth] = useState("1280");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [slideIndex, setSlideIndex] = useState(0);
   const slideTimer = useRef<any>(null);
@@ -57,6 +59,8 @@ export default function HomePage() {
           if (d.heroDescription) setHeroDescription(d.heroDescription);
           if (d.heroType) setHeroType(d.heroType);
           if (d.borderRadius) setBorderRadius(d.borderRadius);
+          if (d.borderColor) setBorderColor(d.borderColor);
+          if (d.maxWidth) setMaxWidth(d.maxWidth);
         }
       } catch (e) { console.error(e); }
     };
@@ -73,6 +77,17 @@ export default function HomePage() {
   const gridImages = heroImages.length > 0 ? heroImages : works.map((w) => w.images?.[0]).filter(Boolean) as string[];
   const filtered = selectedCategory === "ALL" ? works : works.filter((w) => w.category === selectedCategory);
   const br = borderRadius === "rounded" ? 14 : 0;
+  const bc = borderColor === "transparent" ? "transparent" : borderColor;
+  const mw = maxWidth === "100%" ? "100%" : `${maxWidth}px`;
+
+  const imgStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
+    width: "100%", height: "100%", objectFit: "cover", ...extra
+  });
+
+  const cardBase = (extra?: React.CSSProperties): React.CSSProperties => ({
+    borderRadius: br, overflow: "hidden", background: "#1a1a24",
+    border: `1px solid ${bc}`, ...extra
+  });
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#0a0a0f", color: "#f0f0ff" }}>
@@ -81,7 +96,8 @@ export default function HomePage() {
       {/* ── 히어로 ── */}
       <section style={{ minHeight: "100vh", paddingTop: 80, position: "relative", overflow: "hidden", background: "linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%)" }}>
         <div style={{ position: "absolute", top: "30%", left: "40%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "60px 24px 40px" }}>
+
+        <div style={{ maxWidth: mw, margin: "0 auto", padding: "60px 24px 40px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
             <div style={{ width: 32, height: 1, background: "#6366f1" }} />
             <span style={{ color: "#818cf8", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase" }}>구미대학교 공식 포트폴리오 플랫폼</span>
@@ -94,9 +110,7 @@ export default function HomePage() {
                 <span style={{ display: "block", background: "linear-gradient(135deg, #6366f1, #22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{heroSubtitle}</span>
                 <span style={{ display: "block", color: "#f0f0ff" }}>{heroTagline}</span>
               </h1>
-              <p style={{ color: "#9999bb", fontSize: 17, lineHeight: 1.7, marginBottom: 40, maxWidth: 420 }}>
-                {heroDescription}
-              </p>
+              <p style={{ color: "#9999bb", fontSize: 17, lineHeight: 1.7, marginBottom: 40, maxWidth: 420 }}>{heroDescription}</p>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 56 }}>
                 <Link href="/gallery" style={{ background: "#6366f1", color: "white", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>포트폴리오 보기 →</Link>
                 {!firebaseUser && (
@@ -113,25 +127,39 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 히어로 이미지 */}
-            {heroType === "grid" ? (
+            {/* 히어로 이미지 영역 */}
+            {heroType === "grid" && (
+              /* 비대칭 그리드 */
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(3, 160px)", gap: 10 }}>
-                <div style={{ gridColumn: "1 / span 2", gridRow: "1 / span 2", borderRadius: br, overflow: "hidden", background: "#1a1a24", border: "1px solid #2e2e3f" }}>
-                  {gridImages[0] ? <img src={gridImages[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, fontSize: 48 }}>🎨</div>}
+                <div style={{ ...cardBase(), gridColumn: "1 / span 2", gridRow: "1 / span 2" }}>
+                  {gridImages[0] ? <img src={gridImages[0]} alt="" style={imgStyle()} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, fontSize: 48 }}>🎨</div>}
                 </div>
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} style={{ borderRadius: br, overflow: "hidden", background: "#1a1a24", border: "1px solid #2e2e3f", gridColumn: i === 4 ? "2 / span 2" : undefined }}>
-                    {gridImages[i] ? <img src={gridImages[i]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
+                  <div key={i} style={{ ...cardBase(), gridColumn: i === 4 ? "2 / span 2" : undefined }}>
+                    {gridImages[i] ? <img src={gridImages[i]} alt="" style={imgStyle()} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
                   </div>
                 ))}
               </div>
-            ) : (
-              <div style={{ position: "relative", borderRadius: br, overflow: "hidden", height: 480, background: "#1a1a24", border: "1px solid #2e2e3f" }}>
-                {gridImages.length > 0 ? (
-                  <img src={gridImages[slideIndex]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "opacity 0.5s" }} />
-                ) : (
-                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.2, fontSize: 64 }}>🎨</div>
-                )}
+            )}
+
+            {heroType === "square" && (
+              /* 정사각형 그리드 */
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <div key={i} style={{ ...cardBase(), aspectRatio: "1" }}>
+                    {gridImages[i] ? <img src={gridImages[i]} alt="" style={imgStyle()} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {heroType === "slide" && (
+              /* 슬라이드 */
+              <div style={{ position: "relative", ...cardBase({ height: 480 }) }}>
+                {gridImages.length > 0
+                  ? <img src={gridImages[slideIndex]} alt="" style={imgStyle({ transition: "opacity 0.5s" })} />
+                  : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.2, fontSize: 64 }}>🎨</div>
+                }
                 {gridImages.length > 1 && (
                   <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }}>
                     {gridImages.map((_, i) => (
@@ -146,7 +174,7 @@ export default function HomePage() {
       </section>
 
       {/* ── 갤러리 ── */}
-      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 24px" }}>
+      <section style={{ maxWidth: mw, margin: "0 auto", padding: "80px 24px" }}>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 48, flexWrap: "wrap", gap: 16 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
@@ -162,7 +190,7 @@ export default function HomePage() {
 
         <div style={{ display: "flex", gap: 8, marginBottom: 40, overflowX: "auto", paddingBottom: 8 }}>
           {CATEGORIES.map((c) => (
-            <button key={c} onClick={() => setSelectedCategory(c)} style={{ flexShrink: 0, padding: "8px 20px", borderRadius: 999, fontSize: 13, fontWeight: 600, border: selectedCategory === c ? "none" : "1px solid #2e2e3f", background: selectedCategory === c ? "#6366f1" : "#111118", color: selectedCategory === c ? "white" : "#9999bb", cursor: "pointer" }}>{c}</button>
+            <button key={c} onClick={() => setSelectedCategory(c)} style={{ flexShrink: 0, padding: "8px 20px", borderRadius: 999, fontSize: 13, fontWeight: 600, border: selectedCategory === c ? "none" : `1px solid ${bc}`, background: selectedCategory === c ? "#6366f1" : "#111118", color: selectedCategory === c ? "white" : "#9999bb", cursor: "pointer" }}>{c}</button>
           ))}
         </div>
 
@@ -175,11 +203,11 @@ export default function HomePage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
             {filtered.slice(0, 8).map((w) => (
               <Link key={w.id} href={`/work/${w.id}`} style={{ textDecoration: "none" }}>
-                <div style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: br, overflow: "hidden", cursor: "pointer", transition: "all 0.3s" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(99,102,241,0.5)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-4px)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#2e2e3f"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}>
+                <div style={{ ...cardBase({ background: "#111118" }), transition: "all 0.3s", cursor: "pointer" }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 40px rgba(99,102,241,0.2)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}>
                   <div style={{ aspectRatio: "1", background: "#1a1a24", overflow: "hidden" }}>
-                    {w.images?.[0] ? <img src={w.images[0]} alt={w.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🎨</div>}
+                    {w.images?.[0] ? <img src={w.images[0]} alt={w.title} style={imgStyle()} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🎨</div>}
                   </div>
                   <div style={{ padding: 14 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#f0f0ff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.title}</div>
@@ -193,8 +221,8 @@ export default function HomePage() {
       </section>
 
       {/* ── How It Works ── */}
-      <section style={{ background: "#111118", borderTop: "1px solid #2e2e3f", borderBottom: "1px solid #2e2e3f" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 24px" }}>
+      <section style={{ background: "#111118", borderTop: `1px solid ${bc}`, borderBottom: `1px solid ${bc}` }}>
+        <div style={{ maxWidth: mw, margin: "0 auto", padding: "80px 24px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
             <div style={{ width: 32, height: 1, background: "#6366f1" }} />
             <span style={{ color: "#818cf8", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase" }}>How It Works</span>
@@ -206,7 +234,7 @@ export default function HomePage() {
               { step: "02", icon: "🔍", title: "기업이 발견", desc: "산업체 인사 담당자가 갤러리에서 당신의 작품을 발견합니다" },
               { step: "03", icon: "💼", title: "채용 연결", desc: "채용 제안을 받고 꿈의 기업에 지원하세요" },
             ].map((item) => (
-              <div key={item.step} style={{ background: "#1a1a24", border: "1px solid #2e2e3f", borderRadius: br, padding: 32, position: "relative", overflow: "hidden" }}>
+              <div key={item.step} style={{ ...cardBase({ background: "#1a1a24", padding: 32, position: "relative" }) }}>
                 <div style={{ position: "absolute", top: 16, right: 20, fontSize: 56, fontWeight: 900, color: "#2e2e3f" }}>{item.step}</div>
                 <div style={{ fontSize: 36, marginBottom: 16 }}>{item.icon}</div>
                 <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>{item.title}</div>
@@ -218,8 +246,8 @@ export default function HomePage() {
       </section>
 
       {/* ── CTA ── */}
-      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 24px" }}>
-        <div style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: br + 8, padding: "80px 40px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+      <section style={{ maxWidth: mw, margin: "0 auto", padding: "80px 24px" }}>
+        <div style={{ ...cardBase({ background: "#111118", padding: "80px 40px", textAlign: "center", position: "relative" }) }}>
           <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
           <div style={{ position: "relative", zIndex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 24 }}>
