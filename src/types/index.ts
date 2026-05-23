@@ -63,7 +63,7 @@ export interface Offer {
   jobTitle: string;
   employmentType: "정규직" | "인턴" | "프리랜서" | "계약직";
   message: string;
-  status: "pending" | "accepted" | "declined";
+  status: string;
   createdAt: Timestamp;
   respondedAt?: Timestamp;
 }
