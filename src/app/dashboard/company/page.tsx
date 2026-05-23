@@ -6,6 +6,17 @@ import { useAuthStore } from "@/store/authStore";
 import { getOffersFromCompany } from "@/lib/firestore";
 import type { Offer } from "@/types";
 
+const getStatusLabel = (status: string) => {
+  const map: Record<string, { label: string; color: string; bg: string }> = {
+    pending:        { label: "대기 중",     color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
+    pending_admin:  { label: "검토 중",     color: "#818cf8", bg: "rgba(129,140,248,0.1)" },
+    admin_rejected: { label: "거절됨",      color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
+    accepted:       { label: "수락",        color: "#10b981", bg: "rgba(16,185,129,0.1)" },
+    declined:       { label: "거절",        color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
+  };
+  return map[status] ?? { label: "알 수 없음", color: "#55556e", bg: "rgba(85,85,110,0.1)" };
+};
+
 export default function CompanyDashboard() {
   const router = useRouter();
   const { firebaseUser, userDoc, loading } = useAuthStore();
@@ -28,7 +39,6 @@ export default function CompanyDashboard() {
 
   const pending  = offers.filter((o) => o.status === "pending").length;
   const accepted = offers.filter((o) => o.status === "accepted").length;
-  const declined = offers.filter((o) => o.status === "declined").length;
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#f0f0ff" }}>
@@ -58,8 +68,8 @@ export default function CompanyDashboard() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 40 }}>
           {[
             { label: "발송한 제안", value: offers.length, color: "#818cf8", icon: "📨" },
-            { label: "수락된 제안", value: accepted, color: "#10b981", icon: "✅" },
-            { label: "대기 중", value: pending, color: "#f59e0b", icon: "⏳" },
+            { label: "수락된 제안", value: accepted,      color: "#10b981", icon: "✅" },
+            { label: "대기 중",    value: pending,        color: "#f59e0b", icon: "⏳" },
           ].map((c) => (
             <div key={c.label} style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, padding: 24 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
@@ -74,8 +84,8 @@ export default function CompanyDashboard() {
         {/* 빠른 메뉴 */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16, marginBottom: 40 }}>
           {[
-            { href: "/gallery", icon: "🔍", label: "학생 검색", desc: "갤러리에서 인재를 찾아보세요" },
-            { href: "/dashboard/company/offers", icon: "📋", label: "제안 관리", desc: `${offers.length}건의 제안 현황 확인` },
+            { href: "/gallery",                   icon: "🔍", label: "학생 검색", desc: "갤러리에서 인재를 찾아보세요" },
+            { href: "/dashboard/company/offers",  icon: "📋", label: "제안 관리", desc: `${offers.length}건의 제안 현황 확인` },
           ].map((m) => (
             <Link key={m.href} href={m.href} style={{
               background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16,
@@ -117,12 +127,7 @@ export default function CompanyDashboard() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {offers.slice(0, 5).map((offer) => {
-                const statusMap: any = {
-                  pending:  { label: "대기 중", color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-                  accepted: { label: "수락",   color: "#10b981", bg: "rgba(16,185,129,0.1)" },
-                  declined: { label: "거절",   color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
-                };
-                const s = statusMap[offer.status];
+                const s = getStatusLabel(offer.status);
                 return (
                   <div key={offer.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#1a1a24", borderRadius: 10 }}>
                     <div>
