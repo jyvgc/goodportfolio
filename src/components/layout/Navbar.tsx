@@ -7,6 +7,18 @@ import { useRouter } from "next/navigation";
 import { getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+const getAvatarColor = (name: string) => {
+  const colors = [
+    "linear-gradient(135deg, #6366f1, #22d3ee)",
+    "linear-gradient(135deg, #f59e0b, #ef4444)",
+    "linear-gradient(135deg, #10b981, #22d3ee)",
+    "linear-gradient(135deg, #a855f7, #6366f1)",
+    "linear-gradient(135deg, #f97316, #f59e0b)",
+  ];
+  const idx = (name?.charCodeAt(0) || 0) % colors.length;
+  return colors[idx];
+};
+
 export default function Navbar() {
   const { firebaseUser, userDoc } = useAuthStore();
   const { logout } = useAuth();
@@ -14,20 +26,28 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [maxWidth, setMaxWidth] = useState("1280");
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
-    // 설정 불러오기
     getDoc(doc(db, "settings", "main")).then((snap) => {
       if (snap.exists() && snap.data().maxWidth) setMaxWidth(snap.data().maxWidth);
     }).catch(() => {});
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // 프로필 메뉴 외부 클릭 닫기
+  useEffect(() => {
+    const close = () => setProfileMenuOpen(false);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, []);
+
   const handleLogout = async () => {
     await logout();
     setMenuOpen(false);
+    setProfileMenuOpen(false);
     router.push("/");
   };
 
@@ -38,6 +58,10 @@ export default function Navbar() {
 
   const mw = maxWidth === "100%" ? "100%" : `${maxWidth}px`;
 
+  // 프로필 이미지 URL
+  const profileImage = firebaseUser?.photoURL || userDoc?.profileImage || "";
+  const displayName = userDoc?.displayName || firebaseUser?.displayName || "";
+
   return (
     <nav style={{
       position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
@@ -47,6 +71,7 @@ export default function Navbar() {
       borderBottom: scrolled ? "1px solid #2e2e3f" : "none",
     }}>
       <div style={{ maxWidth: mw, margin: "0 auto", padding: "0 20px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {/* 로고 */}
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
           <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg, #6366f1, #22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <span style={{ color: "white", fontWeight: 900, fontSize: 14 }}>G</span>
@@ -56,16 +81,76 @@ export default function Navbar() {
           </span>
         </Link>
 
+        {/* 데스크탑 메뉴 */}
         <div style={{ display: "flex", alignItems: "center", gap: 4 }} className="desktop-nav">
           <Link href="/gallery" style={{ padding: "8px 16px", borderRadius: 8, fontSize: 14, color: "#9999bb", textDecoration: "none", fontWeight: 500 }}>갤러리</Link>
+
           {firebaseUser ? (
             <>
-              <Link href={dashboardPath} style={{ padding: "8px 16px", borderRadius: 8, fontSize: 14, color: "#9999bb", textDecoration: "none", fontWeight: 500 }}>
-                {userDoc?.role === "admin" ? "🔐 관리자" : "대시보드"}
-              </Link>
-              <button onClick={handleLogout} style={{ padding: "8px 16px", borderRadius: 8, fontSize: 14, color: "#55556e", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
-                로그아웃
-              </button>
+              {/* 프로필 드롭다운 */}
+              <div style={{ position: "relative" }} onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: 10,
+                }}>
+                  {/* 프로필 이미지 or 아바타 */}
+                  <div style={{ width: 34, height: 34, borderRadius: 10, overflow: "hidden", flexShrink: 0, border: "2px solid #2e2e3f" }}>
+                    {profileImage ? (
+                      <img src={profileImage} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", background: getAvatarColor(displayName), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: "white" }}>
+                        {displayName?.charAt(0) || "?"}
+                      </div>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 14, color: "#9999bb", fontWeight: 500 }}>{displayName}</span>
+                  <span style={{ color: "#55556e", fontSize: 12 }}>▾</span>
+                </button>
+
+                {/* 드롭다운 메뉴 */}
+                {profileMenuOpen && (
+                  <div style={{
+                    position: "absolute", top: "calc(100% + 8px)", right: 0,
+                    background: "#111118", border: "1px solid #2e2e3f", borderRadius: 12,
+                    padding: 8, minWidth: 180, boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                    zIndex: 100,
+                  }}>
+                    {/* 프로필 헤더 */}
+                    <div style={{ padding: "10px 12px", borderBottom: "1px solid #1a1a24", marginBottom: 4 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#f0f0ff" }}>{displayName}</div>
+                      <div style={{ fontSize: 11, color: "#55556e", marginTop: 2 }}>{userDoc?.email}</div>
+                    </div>
+
+                    <Link href={dashboardPath} style={{ display: "block", padding: "9px 12px", borderRadius: 8, fontSize: 13, color: "#9999bb", textDecoration: "none", fontWeight: 500 }}
+                      onClick={() => setProfileMenuOpen(false)}>
+                      {userDoc?.role === "admin" ? "🔐 관리자" : "📊 대시보드"}
+                    </Link>
+
+                    {userDoc?.role === "student" && (
+                      <>
+                        <Link href="/dashboard/student/profile" style={{ display: "block", padding: "9px 12px", borderRadius: 8, fontSize: 13, color: "#9999bb", textDecoration: "none" }}
+                          onClick={() => setProfileMenuOpen(false)}>
+                          👤 프로필 편집
+                        </Link>
+                        <Link href={`/portfolio/${firebaseUser.uid}`} style={{ display: "block", padding: "9px 12px", borderRadius: 8, fontSize: 13, color: "#9999bb", textDecoration: "none" }}
+                          onClick={() => setProfileMenuOpen(false)}>
+                          🎨 내 포트폴리오
+                        </Link>
+                      </>
+                    )}
+
+                    <div style={{ borderTop: "1px solid #1a1a24", marginTop: 4, paddingTop: 4 }}>
+                      <button onClick={handleLogout} style={{
+                        display: "block", width: "100%", padding: "9px 12px", borderRadius: 8,
+                        fontSize: 13, color: "#f87171", background: "none", border: "none",
+                        cursor: "pointer", textAlign: "left", fontWeight: 500,
+                      }}>
+                        🚪 로그아웃
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <>
@@ -75,19 +160,46 @@ export default function Navbar() {
           )}
         </div>
 
+        {/* 모바일 햄버거 */}
         <button onClick={() => setMenuOpen(!menuOpen)} style={{ display: "none", background: "none", border: "none", cursor: "pointer", padding: 8, color: "#f0f0ff", fontSize: 22 }} className="mobile-menu-btn">
           {menuOpen ? "✕" : "☰"}
         </button>
       </div>
 
+      {/* 모바일 드롭다운 */}
       {menuOpen && (
         <div style={{ background: "#0a0a0f", borderTop: "1px solid #2e2e3f", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 4 }} className="mobile-dropdown">
+          {firebaseUser && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid #1a1a24", marginBottom: 8 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
+                {profileImage ? (
+                  <img src={profileImage} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <div style={{ width: "100%", height: "100%", background: getAvatarColor(displayName), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, color: "white" }}>
+                    {displayName?.charAt(0) || "?"}
+                  </div>
+                )}
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#f0f0ff" }}>{displayName}</div>
+                <div style={{ fontSize: 11, color: "#55556e" }}>{userDoc?.role === "student" ? "학생" : userDoc?.role === "company" ? "기업" : "관리자"}</div>
+              </div>
+            </div>
+          )}
+
           <Link href="/gallery" onClick={() => setMenuOpen(false)} style={{ padding: "12px 16px", borderRadius: 8, fontSize: 15, color: "#9999bb", textDecoration: "none" }}>갤러리</Link>
+
           {firebaseUser ? (
             <>
               <Link href={dashboardPath} onClick={() => setMenuOpen(false)} style={{ padding: "12px 16px", borderRadius: 8, fontSize: 15, color: "#9999bb", textDecoration: "none" }}>
                 {userDoc?.role === "admin" ? "🔐 관리자" : "대시보드"}
               </Link>
+              {userDoc?.role === "student" && (
+                <>
+                  <Link href="/dashboard/student/profile" onClick={() => setMenuOpen(false)} style={{ padding: "12px 16px", borderRadius: 8, fontSize: 15, color: "#9999bb", textDecoration: "none" }}>프로필 편집</Link>
+                  <Link href={`/portfolio/${firebaseUser.uid}`} onClick={() => setMenuOpen(false)} style={{ padding: "12px 16px", borderRadius: 8, fontSize: 15, color: "#9999bb", textDecoration: "none" }}>내 포트폴리오</Link>
+                </>
+              )}
               <button onClick={handleLogout} style={{ padding: "12px 16px", borderRadius: 8, fontSize: 15, color: "#f87171", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>로그아웃</button>
             </>
           ) : (

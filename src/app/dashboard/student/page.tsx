@@ -2,10 +2,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/authStore";
 import { getWorksByAuthor, getOffersForStudent } from "@/lib/firestore";
 import type { Work, Offer } from "@/types";
+
+const getAvatarColor = (name: string) => {
+  const colors = [
+    "linear-gradient(135deg, #6366f1, #22d3ee)",
+    "linear-gradient(135deg, #f59e0b, #ef4444)",
+    "linear-gradient(135deg, #10b981, #22d3ee)",
+    "linear-gradient(135deg, #a855f7, #6366f1)",
+    "linear-gradient(135deg, #f97316, #f59e0b)",
+  ];
+  const idx = (name?.charCodeAt(0) || 0) % colors.length;
+  return colors[idx];
+};
 
 export default function StudentDashboard() {
   const router = useRouter();
@@ -29,6 +40,8 @@ export default function StudentDashboard() {
   );
 
   const pendingOffers = offers.filter((o) => o.status === "pending");
+  const profileImage = firebaseUser?.photoURL || userDoc?.profileImage || "";
+  const displayName = userDoc?.displayName || "";
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#f0f0ff" }}>
@@ -41,7 +54,6 @@ export default function StudentDashboard() {
           <span style={{ fontWeight: 800, color: "#f0f0ff", fontSize: 15 }}>GoodPortfolio</span>
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ color: "#9999bb", fontSize: 13 }}>{userDoc?.displayName}님</span>
           <Link href={`/portfolio/${firebaseUser?.uid}`} style={{ background: "#1a1a24", border: "1px solid #2e2e3f", color: "#9999bb", padding: "6px 14px", borderRadius: 8, textDecoration: "none", fontSize: 12, fontWeight: 600 }}>
             내 포트폴리오 →
           </Link>
@@ -49,12 +61,27 @@ export default function StudentDashboard() {
       </div>
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 20px" }}>
-        {/* 인사말 */}
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>
-            안녕하세요, <span style={{ background: "linear-gradient(135deg, #6366f1, #22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{userDoc?.displayName}</span>님 👋
-          </h1>
-          <p style={{ color: "#55556e", fontSize: 14 }}>오늘도 멋진 작품을 업로드해 보세요!</p>
+        {/* 프로필 헤더 */}
+        <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 32, background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, padding: 24 }}>
+          {/* 프로필 이미지 */}
+          <div style={{ width: 72, height: 72, borderRadius: 16, overflow: "hidden", flexShrink: 0, border: "2px solid #2e2e3f" }}>
+            {profileImage ? (
+              <img src={profileImage} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <div style={{ width: "100%", height: "100%", background: getAvatarColor(displayName), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 900, color: "white" }}>
+                {displayName?.charAt(0) || "?"}
+              </div>
+            )}
+          </div>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>
+              안녕하세요, <span style={{ background: "linear-gradient(135deg, #6366f1, #22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{displayName}</span>님 👋
+            </h1>
+            <p style={{ color: "#55556e", fontSize: 13 }}>오늘도 멋진 작품을 업로드해 보세요!</p>
+          </div>
+          <Link href="/dashboard/student/profile" style={{ background: "#1a1a24", border: "1px solid #2e2e3f", color: "#9999bb", padding: "8px 16px", borderRadius: 8, textDecoration: "none", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+            프로필 편집
+          </Link>
         </div>
 
         {/* 통계 카드 */}
@@ -101,7 +128,7 @@ export default function StudentDashboard() {
           ))}
         </div>
 
-        {/* 작품 목록 — 그리드 */}
+        {/* 작품 목록 */}
         <div style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, padding: "20px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
             <h2 style={{ fontWeight: 700, fontSize: 15, color: "#f0f0ff" }}>내 작품 ({works.length})</h2>
@@ -119,31 +146,22 @@ export default function StudentDashboard() {
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
               {works.map((w) => (
-                <div key={w.id} style={{ borderRadius: 10, overflow: "hidden", background: "#1a1a24", position: "relative", cursor: "pointer" }}
-                  onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.opacity = "0.85"}
-                  onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.opacity = "1"}>
+                <div key={w.id} style={{ borderRadius: 10, overflow: "hidden", background: "#1a1a24", cursor: "pointer" }}>
                   <div style={{ aspectRatio: "1" }}>
-                    {w.images?.[0] ? (
-                      <img src={w.images[0]} alt={w.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🎨</div>
-                    )}
+                    {w.images?.[0]
+                      ? <img src={w.images[0]} alt={w.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🎨</div>}
                   </div>
                   <div style={{ padding: "8px 10px" }}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#f0f0ff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.title}</div>
                     <div style={{ fontSize: 10, color: "#55556e", marginTop: 2 }}>{w.category}</div>
                   </div>
-                  {!w.isPublic && (
-                    <div style={{ position: "absolute", top: 6, right: 6, background: "rgba(0,0,0,0.7)", color: "#9999bb", fontSize: 10, padding: "2px 6px", borderRadius: 4 }}>비공개</div>
-                  )}
                 </div>
               ))}
-              {/* 업로드 버튼 */}
               <Link href="/dashboard/student/works/new" style={{
                 borderRadius: 10, border: "2px dashed #2e2e3f", display: "flex", alignItems: "center",
                 justifyContent: "center", flexDirection: "column", gap: 6, textDecoration: "none",
-                color: "#55556e", aspectRatio: "1", fontSize: 24,
-                transition: "all 0.2s",
+                color: "#55556e", aspectRatio: "1", fontSize: 24, transition: "all 0.2s",
               }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#6366f1"; (e.currentTarget as HTMLElement).style.color = "#818cf8"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#2e2e3f"; (e.currentTarget as HTMLElement).style.color = "#55556e"; }}>
