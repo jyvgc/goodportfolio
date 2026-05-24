@@ -20,7 +20,7 @@ interface Work { id: string; title: string; category: string; images: string[]; 
 interface Notice { id: string; title: string; content: string; }
 
 export default function HomePage() {
-  const { firebaseUser } = useAuthStore();
+  const { firebaseUser, userDoc } = useAuthStore();
   const [works, setWorks] = useState<Work[]>([]);
   const [heroImages, setHeroImages] = useState<string[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -91,34 +91,20 @@ export default function HomePage() {
     borderRadius: br, overflow: "hidden", background: "#1a1a24", border: `1px solid ${bc}`, ...extra
   });
 
-  // 구조화 데이터 (JSON-LD)
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": "GoodPortfolio",
     "url": "https://goodportfolio-five.vercel.app",
     "description": "구미대학교 웹툰·게임콘텐츠 학생 포트폴리오 플랫폼",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": "https://goodportfolio-five.vercel.app/gallery?q={search_term_string}",
-      "query-input": "required name=search_term_string",
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": "구미대학교 GoodPortfolio",
-      "url": "https://goodportfolio-five.vercel.app",
-    },
   };
+
+  // 학생 로그인 여부
+  const isStudent = firebaseUser && userDoc?.role === "student";
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#0a0a0f", color: "#f0f0ff" }}>
-      {/* 구조화 데이터 */}
-      <Script
-        id="json-ld"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-
+      <Script id="json-ld" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Navbar />
 
       {/* ── 히어로 ── */}
@@ -139,8 +125,19 @@ export default function HomePage() {
               </h1>
               <p style={{ color: "#9999bb", fontSize: 17, lineHeight: 1.7, marginBottom: 40, maxWidth: 420 }}>{heroDescription}</p>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 56 }}>
-                <Link href="/gallery" style={{ background: "#6366f1", color: "white", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>포트폴리오 보기 →</Link>
-                {!firebaseUser && <Link href="/register" style={{ border: "1px solid #3d3d52", color: "#9999bb", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>회원가입</Link>}
+                <Link href="/gallery" style={{ background: "#6366f1", color: "white", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>
+                  포트폴리오 보기 →
+                </Link>
+                {/* 3번: 학생 로그인 시 작품등록 버튼, 비로그인 시 회원가입 버튼 */}
+                {isStudent ? (
+                  <Link href="/dashboard/student/works/new" style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>
+                    🎨 작품 등록
+                  </Link>
+                ) : !firebaseUser ? (
+                  <Link href="/register" style={{ border: "1px solid #3d3d52", color: "#9999bb", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>
+                    회원가입
+                  </Link>
+                ) : null}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, borderTop: "1px solid #2e2e3f", paddingTop: 32 }}>
                 {stats.map((s) => (
@@ -152,16 +149,16 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 히어로 이미지 — 클릭 시 갤러리 */}
+            {/* 히어로 이미지 */}
             <Link href="/gallery" style={{ textDecoration: "none", display: "block" }}>
               {heroType === "grid" && (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(3, 160px)", gap: 10 }}>
                   <div style={{ ...cardStyle(), gridColumn: "1 / span 2", gridRow: "1 / span 2" }}>
-                    {gridImages[0] ? <img src={gridImages[0]} alt="포트폴리오 작품" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, fontSize: 48 }}>🎨</div>}
+                    {gridImages[0] ? <img src={gridImages[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, fontSize: 48 }}>🎨</div>}
                   </div>
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} style={{ ...cardStyle(), gridColumn: i === 4 ? "2 / span 2" : undefined }}>
-                      {gridImages[i] ? <img src={gridImages[i]} alt={`포트폴리오 작품 ${i}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
+                      {gridImages[i] ? <img src={gridImages[i]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
                     </div>
                   ))}
                 </div>
@@ -170,7 +167,7 @@ export default function HomePage() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
                   {Array.from({ length: 9 }).map((_, i) => (
                     <div key={i} style={{ ...cardStyle(), aspectRatio: "1" }}>
-                      {gridImages[i] ? <img src={gridImages[i]} alt={`포트폴리오 작품 ${i}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
+                      {gridImages[i] ? <img src={gridImages[i]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, fontSize: 24 }}>🎨</div>}
                     </div>
                   ))}
                 </div>
@@ -178,7 +175,7 @@ export default function HomePage() {
               {heroType === "slide" && (
                 <div style={{ position: "relative", ...cardStyle({ height: 480 }) }}>
                   {gridImages.length > 0
-                    ? <img src={gridImages[slideIndex]} alt="포트폴리오 슬라이드" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "opacity 0.5s" }} />
+                    ? <img src={gridImages[slideIndex]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "opacity 0.5s" }} />
                     : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.2, fontSize: 64 }}>🎨</div>}
                   {gridImages.length > 1 && (
                     <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }} onClick={(e) => e.preventDefault()}>
@@ -318,7 +315,6 @@ export default function HomePage() {
       </section>
 
       <Footer />
-
       <style>{`
         @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr !important; } }
         @media (max-width: 640px) { .how-grid { grid-template-columns: 1fr !important; } }

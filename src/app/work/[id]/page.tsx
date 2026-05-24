@@ -9,6 +9,18 @@ import { db } from "@/lib/firebase";
 import { getUserDoc, incrementWorkView } from "@/lib/firestore";
 import type { Work, UserDoc } from "@/types";
 
+const getAvatarColor = (name: string) => {
+  const colors = [
+    "linear-gradient(135deg, #6366f1, #22d3ee)",
+    "linear-gradient(135deg, #f59e0b, #ef4444)",
+    "linear-gradient(135deg, #10b981, #22d3ee)",
+    "linear-gradient(135deg, #a855f7, #6366f1)",
+    "linear-gradient(135deg, #f97316, #f59e0b)",
+  ];
+  const idx = (name?.charCodeAt(0) || 0) % colors.length;
+  return colors[idx];
+};
+
 export default function WorkDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -65,6 +77,10 @@ export default function WorkDetailPage() {
   const mw = maxWidth === "100%" ? "100%" : `${maxWidth}px`;
   const br = borderRadius === "rounded" ? 14 : 0;
 
+  // 5번: 프로필 이미지 수정 — profileImage 필드 사용
+  const profileImage = author?.profileImage || "";
+  const displayName = author?.displayName || "학생";
+
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#f0f0ff" }}>
       <Navbar />
@@ -77,45 +93,33 @@ export default function WorkDetailPage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 40, alignItems: "start" }} className="work-detail-grid">
           {/* 왼쪽 — 이미지 */}
           <div>
-            {/* 메인 이미지 — 클릭 시 전체화면 */}
-            <div
-              onClick={() => setFullscreen(true)}
-              style={{ borderRadius: br, overflow: "hidden", background: "#111118", border: "none", marginBottom: 12, cursor: "zoom-in" }}>
+            <div onClick={() => setFullscreen(true)} style={{ borderRadius: br, overflow: "hidden", background: "#111118", border: "none", marginBottom: 12, cursor: "zoom-in" }}>
               {work.images?.[selectedImg] ? (
-                <img src={work.images[selectedImg]} alt={work.title}
-                  style={{ width: "100%", height: "auto", display: "block", objectFit: "contain", maxHeight: "70vh" }} />
+                <img src={work.images[selectedImg]} alt={work.title} style={{ width: "100%", height: "auto", display: "block", objectFit: "contain", maxHeight: "70vh" }} />
               ) : (
                 <div style={{ width: "100%", height: 400, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>🎨</div>
               )}
             </div>
 
-            {/* 썸네일 */}
             {(work.images?.length ?? 0) > 1 && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 32 }}>
                 {work.images?.map((img, i) => (
-                  <div key={i} onClick={() => setSelectedImg(i)} style={{
-                    width: 72, height: 72, borderRadius: br, overflow: "hidden", cursor: "pointer",
-                    border: selectedImg === i ? "2px solid #6366f1" : "2px solid transparent",
-                    opacity: selectedImg === i ? 1 : 0.6, transition: "all 0.2s",
-                  }}>
+                  <div key={i} onClick={() => setSelectedImg(i)} style={{ width: 72, height: 72, borderRadius: br, overflow: "hidden", cursor: "pointer", border: selectedImg === i ? "2px solid #6366f1" : "2px solid transparent", opacity: selectedImg === i ? 1 : 0.6, transition: "all 0.2s" }}>
                     <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   </div>
                 ))}
               </div>
             )}
 
-            {/* 전체 이미지 스크롤 */}
             {(work.images?.length ?? 0) > 1 && (
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                   <div style={{ width: 24, height: 1, background: "#6366f1" }} />
-                  <span style={{ color: "#818cf8", fontSize: 11, fontWeight: 600, letterSpacing: "0.15em", textTransform: "uppercase" }}>
-                    All Images ({work.images?.length})
-                  </span>
+                  <span style={{ color: "#818cf8", fontSize: 11, fontWeight: 600, letterSpacing: "0.15em", textTransform: "uppercase" }}>All Images ({work.images?.length})</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {work.images?.map((img, i) => (
-                    <div key={i} onClick={() => setFullscreen(true)} style={{ borderRadius: br, overflow: "hidden", border: "none", cursor: "zoom-in" }}>
+                    <div key={i} onClick={() => { setSelectedImg(i); setFullscreen(true); }} style={{ borderRadius: br, overflow: "hidden", border: "none", cursor: "zoom-in" }}>
                       <img src={img} alt={`${work.title} ${i + 1}`} style={{ width: "100%", height: "auto", display: "block" }} />
                     </div>
                   ))}
@@ -131,11 +135,20 @@ export default function WorkDetailPage() {
             </span>
             <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 16, lineHeight: 1.3 }}>{work.title}</h1>
 
+            {/* 5번: 프로필 이미지 수정 */}
             {author && (
-              <Link href={`/portfolio/${work.authorUid}`} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", marginBottom: 24, padding: "12px 16px", background: "#111118", border: "1px solid #2e2e3f", borderRadius: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #6366f1, #22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🎨</div>
+              <Link href={`/portfolio/${work.authorUid}`} style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", marginBottom: 24, padding: "12px 16px", background: "#111118", border: "1px solid #2e2e3f", borderRadius: 10 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, overflow: "hidden", flexShrink: 0, border: "2px solid #2e2e3f" }}>
+                  {profileImage ? (
+                    <img src={profileImage} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", background: getAvatarColor(displayName), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, color: "white" }}>
+                      {displayName.charAt(0)}
+                    </div>
+                  )}
+                </div>
                 <div>
-                  <div style={{ fontWeight: 700, color: "#f0f0ff", fontSize: 14 }}>{author.displayName}</div>
+                  <div style={{ fontWeight: 700, color: "#f0f0ff", fontSize: 14 }}>{displayName}</div>
                   <div style={{ color: "#55556e", fontSize: 12 }}>포트폴리오 보기 →</div>
                 </div>
               </Link>
@@ -167,8 +180,7 @@ export default function WorkDetailPage() {
                 <div style={{ fontSize: 12, color: "#55556e" }}>이미지</div>
               </div>
             </div>
-
-            <p style={{ color: "#55556e", fontSize: 12, marginTop: 8 }}>🔍 이미지를 클릭하면 전체화면으로 볼 수 있어요</p>
+            <p style={{ color: "#55556e", fontSize: 12, marginTop: 4 }}>🔍 이미지를 클릭하면 전체화면으로 볼 수 있어요</p>
 
             {work.videoUrl && (
               <a href={work.videoUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#1a1a24", border: "1px solid rgba(99,102,241,0.3)", color: "#818cf8", padding: "12px 20px", borderRadius: 8, textDecoration: "none", fontWeight: 600, marginTop: 16 }}>
@@ -183,7 +195,6 @@ export default function WorkDetailPage() {
       {fullscreen && (
         <div onClick={() => setFullscreen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}>
           <button onClick={() => setFullscreen(false)} style={{ position: "absolute", top: 20, right: 20, background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: 40, height: 40, borderRadius: "50%", cursor: "pointer", fontSize: 18 }}>✕</button>
-          {/* 이전/다음 */}
           {(work.images?.length ?? 0) > 1 && (
             <>
               <button onClick={(e) => { e.stopPropagation(); setSelectedImg((prev) => (prev - 1 + (work.images?.length ?? 1)) % (work.images?.length ?? 1)); }}
@@ -192,10 +203,7 @@ export default function WorkDetailPage() {
                 style={{ position: "absolute", right: 20, background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 20 }}>›</button>
             </>
           )}
-          <img src={work.images?.[selectedImg]} alt={work.title}
-            style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", borderRadius: 8 }}
-            onClick={(e) => e.stopPropagation()}
-          />
+          <img src={work.images?.[selectedImg]} alt={work.title} style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", borderRadius: 8 }} onClick={(e) => e.stopPropagation()} />
           <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", color: "rgba(255,255,255,0.5)", fontSize: 13 }}>
             {selectedImg + 1} / {work.images?.length}
           </div>
