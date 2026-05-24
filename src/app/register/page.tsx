@@ -6,124 +6,430 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
-import { useAuth } from "@/hooks/useAuth";
-import type { UserRole } from "@/types";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { createUserDoc } from "@/lib/firestore";
 
-const schema = z.object({
+const studentSchema = z.object({
+  department: z.enum(["웹툰스쿨", "비주얼게임컨텐츠스쿨"]),
   displayName: z.string().min(2, "이름은 2자 이상이어야 합니다"),
+  grade: z.string().min(1, "학년을 선택하세요"),
   email: z.string().email("올바른 이메일을 입력하세요"),
   password: z.string().min(8, "비밀번호는 8자 이상이어야 합니다"),
   confirmPassword: z.string(),
-  role: z.enum(["student", "company"]),
+  agreeTerms: z.boolean().refine((v) => v, "이용약관에 동의해주세요"),
+  agreePrivacy: z.boolean().refine((v) => v, "개인정보처리방침에 동의해주세요"),
 }).refine((d) => d.password === d.confirmPassword, {
   message: "비밀번호가 일치하지 않습니다",
   path: ["confirmPassword"],
 });
-type FormData = z.infer<typeof schema>;
+
+const companySchema = z.object({
+  companyName: z.string().min(1, "회사명을 입력하세요"),
+  industry: z.string().min(1, "업종을 선택하세요"),
+  companySize: z.string().min(1, "회사 규모를 선택하세요"),
+  website: z.string().url("올바른 URL을 입력하세요").optional().or(z.literal("")),
+  displayName: z.string().min(2, "담당자 이름을 입력하세요"),
+  title: z.string().min(1, "직함을 입력하세요"),
+  email: z.string().email("올바른 이메일을 입력하세요"),
+  password: z.string().min(8, "비밀번호는 8자 이상이어야 합니다"),
+  confirmPassword: z.string(),
+  phone: z.string().min(1, "전화번호를 입력하세요"),
+  agreeTerms: z.boolean().refine((v) => v, "이용약관에 동의해주세요"),
+  agreePrivacy: z.boolean().refine((v) => v, "개인정보처리방침에 동의해주세요"),
+  agreeMarketing: z.boolean().optional(),
+}).refine((d) => d.password === d.confirmPassword, {
+  message: "비밀번호가 일치하지 않습니다",
+  path: ["confirmPassword"],
+});
+
+type StudentForm = z.infer<typeof studentSchema>;
+type CompanyForm = z.infer<typeof companySchema>;
+
+const INDUSTRIES = ["웹툰 제작사", "게임 회사", "광고/마케팅", "애니메이션", "출판사", "교육기관", "IT/스타트업", "기타"];
+const COMPANY_SIZES = ["1~10명 (스타트업)", "11~50명 (소기업)", "51~200명 (중소기업)", "201~1000명 (중견기업)", "1000명 이상 (대기업)"];
+
+const inputStyle: React.CSSProperties = {
+  width: "100%", background: "#111118", border: "1px solid #2e2e3f",
+  color: "#f0f0ff", padding: "12px 16px", borderRadius: 10, fontSize: 14, outline: "none",
+};
+const labelStyle: React.CSSProperties = {
+  display: "block", fontSize: 13, color: "#9999bb", marginBottom: 6, fontWeight: 500,
+};
+const errorStyle: React.CSSProperties = {
+  color: "#f87171", fontSize: 12, marginTop: 4,
+};
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { registerWithEmail } = useAuth();
+  const [role, setRole] = useState<"student" | "company">("student");
   const [loading, setLoading] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: { role: "student" },
+  const studentForm = useForm<StudentForm>({
+    resolver: zodResolver(studentSchema),
+    defaultValues: { department: "웹툰스쿨", grade: "", agreeTerms: false, agreePrivacy: false },
   });
-  const role = watch("role");
 
-  const onSubmit = async (data: FormData) => {
-    if (data.role === "student" && !data.email.endsWith("@gumi.ac.kr")) {
-      toast.error("학생은 학교 이메일(@gumi.ac.kr)로 가입해야 합니다.");
-      return;
-    }
+  const companyForm = useForm<CompanyForm>({
+    resolver: zodResolver(companySchema),
+    defaultValues: { industry: "", companySize: "", agreeTerms: false, agreePrivacy: false, agreeMarketing: false },
+  });
+
+  const onStudentSubmit = async (data: StudentForm) => {
     try {
       setLoading(true);
-      await registerWithEmail(data.email, data.password, data.displayName, data.role as UserRole);
-      toast.success(
-        data.role === "student"
-          ? "가입 완료! 대시보드로 이동합니다."
-          : "기업 계정 신청 완료! 관리자 승인 후 이용 가능합니다."
-      );
-      router.push(data.role === "student" ? "/dashboard/student" : "/");
+      const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      await updateProfile(cred.user, { displayName: data.displayName });
+      await createUserDoc(cred.user.uid, {
+        uid: cred.user.uid,
+        email: data.email,
+        displayName: data.displayName,
+        role: "student",
+        profileImage: "",
+        isApproved: true,
+      });
+      // 추가 정보 저장
+      const { upsertStudentProfile } = await import("@/lib/firestore");
+      await upsertStudentProfile(cred.user.uid, {
+        uid: cred.user.uid,
+        department: data.department as any,
+        grade: Number(data.grade),
+        graduationYear: new Date().getFullYear() + (3 - Number(data.grade)),
+        bio: "",
+        skills: [],
+        snsLinks: {},
+        isPublic: false,
+        viewCount: 0,
+        badges: [],
+      });
+      toast.success("가입 완료! 대시보드로 이동합니다.");
+      router.push("/dashboard/student");
     } catch (e: any) {
-      if (e.code === "auth/email-already-in-use") {
-        toast.error("이미 사용 중인 이메일입니다.");
-      } else {
-        toast.error("회원가입에 실패했습니다. 다시 시도해주세요.");
-      }
-    } finally {
-      setLoading(false);
-    }
+      if (e.code === "auth/email-already-in-use") toast.error("이미 사용 중인 이메일입니다.");
+      else toast.error("회원가입에 실패했습니다.");
+    } finally { setLoading(false); }
+  };
+
+  const onCompanySubmit = async (data: CompanyForm) => {
+    try {
+      setLoading(true);
+      const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      await updateProfile(cred.user, { displayName: data.displayName });
+      await createUserDoc(cred.user.uid, {
+        uid: cred.user.uid,
+        email: data.email,
+        displayName: data.displayName,
+        role: "company",
+        profileImage: "",
+        isApproved: false,
+      });
+      // 기업 추가 정보 Firestore에 저장
+      const { db } = await import("@/lib/firebase");
+      const { doc, setDoc, serverTimestamp } = await import("firebase/firestore");
+      await setDoc(doc(db, "companyProfiles", cred.user.uid), {
+        uid: cred.user.uid,
+        companyName: data.companyName,
+        industry: data.industry,
+        companySize: data.companySize,
+        website: data.website || "",
+        contactPerson: data.displayName,
+        title: data.title,
+        phone: data.phone,
+        agreeMarketing: data.agreeMarketing || false,
+        savedStudents: [],
+        createdAt: serverTimestamp(),
+      });
+      toast.success("기업 계정 신청 완료! 관리자 승인 후 이용 가능합니다.");
+      router.push("/auth/pending");
+    } catch (e: any) {
+      if (e.code === "auth/email-already-in-use") toast.error("이미 사용 중인 이메일입니다.");
+      else toast.error("회원가입에 실패했습니다.");
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
-      <div className="w-full max-w-md card p-8">
-        <Link href="/" className="block text-center mb-8">
-          <span className="text-3xl font-extrabold text-brand-700">Good</span>
-          <span className="text-3xl font-extrabold text-gray-800">Portfolio</span>
+    <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#f0f0ff", padding: "40px 20px" }}>
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
+        {/* 로고 */}
+        <Link href="/" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, textDecoration: "none", marginBottom: 40 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, #6366f1, #22d3ee)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ color: "white", fontWeight: 900, fontSize: 18 }}>G</span>
+          </div>
+          <span style={{ fontWeight: 800, fontSize: 22, color: "#f0f0ff" }}>
+            Good<span style={{ background: "linear-gradient(135deg, #6366f1, #22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Portfolio</span>
+          </span>
         </Link>
-        <h1 className="text-xl font-bold mb-6 text-center">회원가입</h1>
 
-        <div className="flex rounded-lg overflow-hidden border border-gray-200 mb-6">
-          {(["student", "company"] as const).map((r) => (
-            <label key={r} className={`flex-1 text-center py-2.5 text-sm font-medium cursor-pointer transition-colors
-              ${role === r ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
-              <input type="radio" {...register("role")} value={r} className="hidden" />
-              {r === "student" ? "👨‍🎨 학생" : "🏢 기업/HR"}
-            </label>
+        <h1 style={{ fontSize: 26, fontWeight: 800, textAlign: "center", marginBottom: 6 }}>회원가입</h1>
+        <p style={{ color: "#55556e", fontSize: 14, textAlign: "center", marginBottom: 32 }}>계정 유형을 선택해 주세요</p>
+
+        {/* 역할 선택 탭 */}
+        <div style={{ display: "flex", background: "#111118", borderRadius: 12, padding: 4, marginBottom: 32, border: "1px solid #2e2e3f" }}>
+          {[
+            { key: "student", label: "👨‍🎨 학생", desc: "포트폴리오 등록" },
+            { key: "company", label: "🏢 기업/HR", desc: "인재 채용" },
+          ].map((r) => (
+            <button key={r.key} onClick={() => setRole(r.key as any)} style={{
+              flex: 1, padding: "12px 8px", borderRadius: 10, cursor: "pointer",
+              border: "none", transition: "all 0.2s",
+              background: role === r.key ? "#6366f1" : "transparent",
+              color: role === r.key ? "white" : "#9999bb",
+            }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{r.label}</div>
+              <div style={{ fontSize: 11, opacity: 0.8, marginTop: 2 }}>{r.desc}</div>
+            </button>
           ))}
         </div>
 
+        {/* ── 학생 폼 ── */}
         {role === "student" && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-xs text-blue-700">
-            ℹ️ 학생은 학교 이메일 <strong>@gumi.ac.kr</strong> 로만 가입 가능합니다.
-          </div>
+          <form onSubmit={studentForm.handleSubmit(onStudentSubmit)}>
+            <div style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, padding: 24, marginBottom: 16 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#818cf8", marginBottom: 20, textTransform: "uppercase", letterSpacing: "0.1em" }}>학과 정보</h3>
+
+              {/* 학과 선택 */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>학과 *</label>
+                <div style={{ display: "flex", gap: 10 }}>
+                  {["웹툰스쿨", "비주얼게임컨텐츠스쿨"].map((d) => (
+                    <button key={d} type="button"
+                      onClick={() => studentForm.setValue("department", d as any)}
+                      style={{
+                        flex: 1, padding: "12px 8px", borderRadius: 10, cursor: "pointer",
+                        border: studentForm.watch("department") === d ? "2px solid #6366f1" : "1px solid #2e2e3f",
+                        background: studentForm.watch("department") === d ? "rgba(99,102,241,0.15)" : "#0a0a0f",
+                        color: studentForm.watch("department") === d ? "#818cf8" : "#9999bb",
+                        fontWeight: 600, fontSize: 13,
+                      }}>
+                      {d === "웹툰스쿨" ? "🖊️ 웹툰스쿨" : "🎮 비주얼게임컨텐츠스쿨"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 학년 */}
+              <div>
+                <label style={labelStyle}>학년 *</label>
+                <select {...studentForm.register("grade")} style={inputStyle}>
+                  <option value="">학년 선택</option>
+                  {[1, 2, 3].map((g) => <option key={g} value={g}>{g}학년</option>)}
+                </select>
+                {studentForm.formState.errors.grade && <p style={errorStyle}>{studentForm.formState.errors.grade.message}</p>}
+              </div>
+            </div>
+
+            <div style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, padding: 24, marginBottom: 16 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#818cf8", marginBottom: 20, textTransform: "uppercase", letterSpacing: "0.1em" }}>개인 정보</h3>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>이름 *</label>
+                <input {...studentForm.register("displayName")} placeholder="홍길동" style={inputStyle} />
+                {studentForm.formState.errors.displayName && <p style={errorStyle}>{studentForm.formState.errors.displayName.message}</p>}
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>이메일 (로그인 ID) *</label>
+                <input {...studentForm.register("email")} type="email" placeholder="example@email.com" style={inputStyle} />
+                {studentForm.formState.errors.email && <p style={errorStyle}>{studentForm.formState.errors.email.message}</p>}
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>비밀번호 * (8자 이상)</label>
+                <input {...studentForm.register("password")} type="password" placeholder="비밀번호 입력" style={inputStyle} />
+                {studentForm.formState.errors.password && <p style={errorStyle}>{studentForm.formState.errors.password.message}</p>}
+              </div>
+
+              <div>
+                <label style={labelStyle}>비밀번호 확인 *</label>
+                <input {...studentForm.register("confirmPassword")} type="password" placeholder="비밀번호 재입력" style={inputStyle} />
+                {studentForm.formState.errors.confirmPassword && <p style={errorStyle}>{studentForm.formState.errors.confirmPassword.message}</p>}
+              </div>
+            </div>
+
+            {/* 동의 */}
+            <div style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, padding: 24, marginBottom: 24 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#818cf8", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.1em" }}>약관 동의</h3>
+              {[
+                { name: "agreeTerms" as const, label: "[필수] 이용약관 동의", onClick: () => setShowTerms(true) },
+                { name: "agreePrivacy" as const, label: "[필수] 개인정보처리방침 동의", onClick: () => setShowPrivacy(true) },
+              ].map((item) => (
+                <label key={item.name} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 12 }}>
+                  <input {...studentForm.register(item.name)} type="checkbox" style={{ width: 18, height: 18, accentColor: "#6366f1" }} />
+                  <span style={{ fontSize: 14, color: "#9999bb" }}>{item.label}</span>
+                  <button type="button" onClick={item.onClick} style={{ marginLeft: "auto", background: "none", border: "none", color: "#6366f1", fontSize: 12, cursor: "pointer" }}>보기</button>
+                </label>
+              ))}
+              {studentForm.formState.errors.agreeTerms && <p style={errorStyle}>{studentForm.formState.errors.agreeTerms.message}</p>}
+              {studentForm.formState.errors.agreePrivacy && <p style={errorStyle}>{studentForm.formState.errors.agreePrivacy.message}</p>}
+            </div>
+
+            <button type="submit" disabled={loading} style={{
+              width: "100%", background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+              color: "white", padding: "14px", borderRadius: 10, fontSize: 16, fontWeight: 700,
+              border: "none", cursor: "pointer", opacity: loading ? 0.6 : 1,
+              boxShadow: "0 4px 20px rgba(99,102,241,0.3)",
+            }}>
+              {loading ? "처리 중..." : "학생으로 가입하기"}
+            </button>
+          </form>
         )}
+
+        {/* ── 기업 폼 ── */}
         {role === "company" && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-700">
-            ℹ️ 기업 계정은 관리자 승인 후 활성화됩니다. (영업일 1~2일 소요)
-          </div>
+          <form onSubmit={companyForm.handleSubmit(onCompanySubmit)}>
+            <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: "12px 16px", marginBottom: 20, fontSize: 13, color: "#f59e0b" }}>
+              ℹ️ 기업 계정은 관리자 승인 후 활성화됩니다. (영업일 1~2일 소요)
+            </div>
+
+            <div style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, padding: 24, marginBottom: 16 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#818cf8", marginBottom: 20, textTransform: "uppercase", letterSpacing: "0.1em" }}>회사 정보</h3>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>회사명 *</label>
+                <input {...companyForm.register("companyName")} placeholder="(주)구미엔터테인먼트" style={inputStyle} />
+                {companyForm.formState.errors.companyName && <p style={errorStyle}>{companyForm.formState.errors.companyName.message}</p>}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                <div>
+                  <label style={labelStyle}>업종 *</label>
+                  <select {...companyForm.register("industry")} style={inputStyle}>
+                    <option value="">업종 선택</option>
+                    {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
+                  </select>
+                  {companyForm.formState.errors.industry && <p style={errorStyle}>{companyForm.formState.errors.industry.message}</p>}
+                </div>
+                <div>
+                  <label style={labelStyle}>회사 규모 *</label>
+                  <select {...companyForm.register("companySize")} style={inputStyle}>
+                    <option value="">규모 선택</option>
+                    {COMPANY_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  {companyForm.formState.errors.companySize && <p style={errorStyle}>{companyForm.formState.errors.companySize.message}</p>}
+                </div>
+              </div>
+
+              <div>
+                <label style={labelStyle}>회사 홈페이지</label>
+                <input {...companyForm.register("website")} placeholder="https://company.com" style={inputStyle} />
+                {companyForm.formState.errors.website && <p style={errorStyle}>{companyForm.formState.errors.website.message}</p>}
+              </div>
+            </div>
+
+            <div style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, padding: 24, marginBottom: 16 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#818cf8", marginBottom: 20, textTransform: "uppercase", letterSpacing: "0.1em" }}>담당자 정보</h3>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                <div>
+                  <label style={labelStyle}>담당자 이름 *</label>
+                  <input {...companyForm.register("displayName")} placeholder="김채용" style={inputStyle} />
+                  {companyForm.formState.errors.displayName && <p style={errorStyle}>{companyForm.formState.errors.displayName.message}</p>}
+                </div>
+                <div>
+                  <label style={labelStyle}>직함 *</label>
+                  <input {...companyForm.register("title")} placeholder="인사팀장" style={inputStyle} />
+                  {companyForm.formState.errors.title && <p style={errorStyle}>{companyForm.formState.errors.title.message}</p>}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>담당자 전화 (유선) *</label>
+                <input {...companyForm.register("phone")} placeholder="054-000-0000" style={inputStyle} />
+                {companyForm.formState.errors.phone && <p style={errorStyle}>{companyForm.formState.errors.phone.message}</p>}
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>이메일 (로그인 ID) *</label>
+                <input {...companyForm.register("email")} type="email" placeholder="hr@company.com" style={inputStyle} />
+                {companyForm.formState.errors.email && <p style={errorStyle}>{companyForm.formState.errors.email.message}</p>}
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>비밀번호 * (8자 이상)</label>
+                <input {...companyForm.register("password")} type="password" placeholder="비밀번호 입력" style={inputStyle} />
+                {companyForm.formState.errors.password && <p style={errorStyle}>{companyForm.formState.errors.password.message}</p>}
+              </div>
+
+              <div>
+                <label style={labelStyle}>비밀번호 확인 *</label>
+                <input {...companyForm.register("confirmPassword")} type="password" placeholder="비밀번호 재입력" style={inputStyle} />
+                {companyForm.formState.errors.confirmPassword && <p style={errorStyle}>{companyForm.formState.errors.confirmPassword.message}</p>}
+              </div>
+            </div>
+
+            {/* 동의 */}
+            <div style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, padding: 24, marginBottom: 24 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#818cf8", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.1em" }}>약관 동의</h3>
+              {[
+                { name: "agreeTerms" as const, label: "[필수] 이용약관 동의", required: true },
+                { name: "agreePrivacy" as const, label: "[필수] 개인정보처리방침 동의", required: true },
+                { name: "agreeMarketing" as const, label: "[선택] 마케팅 정보 수신 동의", required: false },
+              ].map((item) => (
+                <label key={item.name} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 12 }}>
+                  <input {...companyForm.register(item.name)} type="checkbox" style={{ width: 18, height: 18, accentColor: "#6366f1" }} />
+                  <span style={{ fontSize: 14, color: item.required ? "#9999bb" : "#55556e" }}>{item.label}</span>
+                </label>
+              ))}
+              {companyForm.formState.errors.agreeTerms && <p style={errorStyle}>{companyForm.formState.errors.agreeTerms.message}</p>}
+              {companyForm.formState.errors.agreePrivacy && <p style={errorStyle}>{companyForm.formState.errors.agreePrivacy.message}</p>}
+            </div>
+
+            <button type="submit" disabled={loading} style={{
+              width: "100%", background: "linear-gradient(135deg, #22d3ee, #0891b2)",
+              color: "white", padding: "14px", borderRadius: 10, fontSize: 16, fontWeight: 700,
+              border: "none", cursor: "pointer", opacity: loading ? 0.6 : 1,
+              boxShadow: "0 4px 20px rgba(34,211,238,0.3)",
+            }}>
+              {loading ? "처리 중..." : "기업으로 가입하기"}
+            </button>
+          </form>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              {role === "student" ? "이름" : "담당자 이름"}
-            </label>
-            <input {...register("displayName")} className="input-base"
-              placeholder={role === "student" ? "홍길동" : "김채용"} />
-            {errors.displayName && <p className="text-red-500 text-xs mt-1">{errors.displayName.message}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">이메일</label>
-            <input {...register("email")} type="email" className="input-base"
-              placeholder={role === "student" ? "student@gumi.ac.kr" : "hr@company.com"} />
-            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">비밀번호</label>
-            <input {...register("password")} type="password" className="input-base"
-              placeholder="8자 이상" />
-            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">비밀번호 확인</label>
-            <input {...register("confirmPassword")} type="password" className="input-base"
-              placeholder="비밀번호 재입력" />
-            {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>}
-          </div>
-          <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
-            {loading ? "처리 중..." : "가입하기"}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p style={{ textAlign: "center", fontSize: 14, color: "#55556e", marginTop: 24 }}>
           이미 계정이 있으신가요?{" "}
-          <Link href="/login" className="text-brand-600 font-semibold hover:underline">로그인</Link>
+          <Link href="/login" style={{ color: "#818cf8", fontWeight: 600, textDecoration: "none" }}>로그인</Link>
         </p>
       </div>
+
+      {/* 이용약관 모달 */}
+      {showTerms && (
+        <div onClick={() => setShowTerms(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, maxWidth: 560, width: "100%", maxHeight: "80vh", overflow: "auto", padding: 32 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>이용약관</h2>
+            <div style={{ color: "#9999bb", fontSize: 13, lineHeight: 1.8 }}>
+              <p><strong style={{ color: "#f0f0ff" }}>제1조 (목적)</strong><br />이 약관은 GoodPortfolio(이하 "서비스")의 이용 조건 및 절차, 이용자와 서비스 제공자의 권리, 의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
+              <br />
+              <p><strong style={{ color: "#f0f0ff" }}>제2조 (서비스 이용)</strong><br />서비스는 웹툰·게임콘텐츠 학생들의 포트폴리오 전시 및 채용 연계를 위한 플랫폼입니다. 이용자는 본 약관에 동의함으로써 서비스를 이용할 수 있습니다.</p>
+              <br />
+              <p><strong style={{ color: "#f0f0ff" }}>제3조 (금지 행위)</strong><br />타인의 정보 도용, 음란/폭력적 콘텐츠 업로드, 서비스 방해 행위 등은 금지됩니다.</p>
+              <br />
+              <p><strong style={{ color: "#f0f0ff" }}>제4조 (서비스 중단)</strong><br />시스템 점검, 보수, 운영상 필요에 의해 서비스가 일시 중단될 수 있습니다.</p>
+            </div>
+            <button onClick={() => setShowTerms(false)} style={{ marginTop: 20, width: "100%", background: "#6366f1", color: "white", padding: "12px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600 }}>확인</button>
+          </div>
+        </div>
+      )}
+
+      {/* 개인정보처리방침 모달 */}
+      {showPrivacy && (
+        <div onClick={() => setShowPrivacy(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, maxWidth: 560, width: "100%", maxHeight: "80vh", overflow: "auto", padding: 32 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>개인정보처리방침</h2>
+            <div style={{ color: "#9999bb", fontSize: 13, lineHeight: 1.8 }}>
+              <p><strong style={{ color: "#f0f0ff" }}>수집하는 개인정보</strong><br />이름, 이메일, 학과/학년(학생), 회사명/전화번호(기업), 포트폴리오 작품 등</p>
+              <br />
+              <p><strong style={{ color: "#f0f0ff" }}>수집 목적</strong><br />서비스 제공, 포트폴리오 전시, 채용 연계, 서비스 개선</p>
+              <br />
+              <p><strong style={{ color: "#f0f0ff" }}>보유 기간</strong><br />회원 탈퇴 시까지 (관계 법령에 따라 일정 기간 보관)</p>
+              <br />
+              <p><strong style={{ color: "#f0f0ff" }}>제3자 제공</strong><br />이용자 동의 없이 개인정보를 제3자에게 제공하지 않습니다. 단, 채용 제안 수락 시 해당 기업에 연락처가 공개됩니다.</p>
+            </div>
+            <button onClick={() => setShowPrivacy(false)} style={{ marginTop: 20, width: "100%", background: "#6366f1", color: "white", padding: "12px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600 }}>확인</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
