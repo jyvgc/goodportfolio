@@ -53,17 +53,14 @@ export default function StudentDashboard() {
           </div>
           <span style={{ fontWeight: 800, color: "#f0f0ff", fontSize: 15 }}>GoodPortfolio</span>
         </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href={`/portfolio/${firebaseUser?.uid}`} style={{ background: "#1a1a24", border: "1px solid #2e2e3f", color: "#9999bb", padding: "6px 14px", borderRadius: 8, textDecoration: "none", fontSize: 12, fontWeight: 600 }}>
-            내 포트폴리오 →
-          </Link>
-        </div>
+        <Link href={`/portfolio/${firebaseUser?.uid}`} style={{ background: "#1a1a24", border: "1px solid #2e2e3f", color: "#9999bb", padding: "6px 14px", borderRadius: 8, textDecoration: "none", fontSize: 12, fontWeight: 600 }}>
+          내 포트폴리오 →
+        </Link>
       </div>
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 20px" }}>
         {/* 프로필 헤더 */}
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 32, background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, padding: 24 }}>
-          {/* 프로필 이미지 */}
           <div style={{ width: 72, height: 72, borderRadius: 16, overflow: "hidden", flexShrink: 0, border: "2px solid #2e2e3f" }}>
             {profileImage ? (
               <img src={profileImage} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -106,8 +103,8 @@ export default function StudentDashboard() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 28 }} className="quick-menu">
           {[
             { href: "/dashboard/student/works/new", icon: "➕", label: "작품 업로드", desc: "새 작품 등록" },
-            { href: "/dashboard/student/profile", icon: "👤", label: "프로필 편집", desc: "소개, 기술 태그" },
-            { href: "/dashboard/student/offers", icon: "📨", label: "채용 제안", desc: `${pendingOffers.length}건 미응답` },
+            { href: "/dashboard/student/profile",   icon: "👤", label: "프로필 편집", desc: "소개, 기술 태그" },
+            { href: "/dashboard/student/offers",    icon: "📨", label: "채용 제안", desc: `${pendingOffers.length}건 미응답` },
           ].map((m) => (
             <Link key={m.href} href={m.href} style={{
               background: "#111118", border: "1px solid #2e2e3f", borderRadius: 14,
