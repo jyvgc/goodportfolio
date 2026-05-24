@@ -37,7 +37,6 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // 프로필 메뉴 외부 클릭 닫기
   useEffect(() => {
     const close = () => setProfileMenuOpen(false);
     document.addEventListener("click", close);
@@ -56,9 +55,12 @@ export default function Navbar() {
     userDoc?.role === "company" ? "/dashboard/company" :
     "/dashboard/student";
 
-  const mw = maxWidth === "100%" ? "100%" : `${maxWidth}px`;
+  const dashboardLabel =
+    userDoc?.role === "admin"   ? "🔐 관리자" :
+    userDoc?.role === "company" ? "대시보드" :
+    "대시보드";
 
-  // 프로필 이미지 URL
+  const mw = maxWidth === "100%" ? "100%" : `${maxWidth}px`;
   const profileImage = firebaseUser?.photoURL || userDoc?.profileImage || "";
   const displayName = userDoc?.displayName || firebaseUser?.displayName || "";
 
@@ -71,6 +73,7 @@ export default function Navbar() {
       borderBottom: scrolled ? "1px solid #2e2e3f" : "none",
     }}>
       <div style={{ maxWidth: mw, margin: "0 auto", padding: "0 20px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+
         {/* 로고 */}
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
           <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg, #6366f1, #22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -87,13 +90,18 @@ export default function Navbar() {
 
           {firebaseUser ? (
             <>
-              {/* 프로필 드롭다운 */}
+              {/* 대시보드 링크 — 항상 표시 */}
+              <Link href={dashboardPath} style={{ padding: "8px 16px", borderRadius: 8, fontSize: 14, color: "#9999bb", textDecoration: "none", fontWeight: 500 }}>
+                {dashboardLabel}
+              </Link>
+
+              {/* 프로필 아바타 + 드롭다운 */}
               <div style={{ position: "relative" }} onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} style={{
                   display: "flex", alignItems: "center", gap: 8,
-                  background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: 10,
+                  background: "none", border: "none", cursor: "pointer",
+                  padding: "4px 8px", borderRadius: 10,
                 }}>
-                  {/* 프로필 이미지 or 아바타 */}
                   <div style={{ width: 34, height: 34, borderRadius: 10, overflow: "hidden", flexShrink: 0, border: "2px solid #2e2e3f" }}>
                     {profileImage ? (
                       <img src={profileImage} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -103,28 +111,20 @@ export default function Navbar() {
                       </div>
                     )}
                   </div>
-                  <span style={{ fontSize: 14, color: "#9999bb", fontWeight: 500 }}>{displayName}</span>
-                  <span style={{ color: "#55556e", fontSize: 12 }}>▾</span>
+                  <span style={{ fontSize: 13, color: "#9999bb" }}>▾</span>
                 </button>
 
-                {/* 드롭다운 메뉴 */}
+                {/* 드롭다운 */}
                 {profileMenuOpen && (
                   <div style={{
                     position: "absolute", top: "calc(100% + 8px)", right: 0,
                     background: "#111118", border: "1px solid #2e2e3f", borderRadius: 12,
-                    padding: 8, minWidth: 180, boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                    zIndex: 100,
+                    padding: 8, minWidth: 180, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 100,
                   }}>
-                    {/* 프로필 헤더 */}
                     <div style={{ padding: "10px 12px", borderBottom: "1px solid #1a1a24", marginBottom: 4 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: "#f0f0ff" }}>{displayName}</div>
                       <div style={{ fontSize: 11, color: "#55556e", marginTop: 2 }}>{userDoc?.email}</div>
                     </div>
-
-                    <Link href={dashboardPath} style={{ display: "block", padding: "9px 12px", borderRadius: 8, fontSize: 13, color: "#9999bb", textDecoration: "none", fontWeight: 500 }}
-                      onClick={() => setProfileMenuOpen(false)}>
-                      {userDoc?.role === "admin" ? "🔐 관리자" : "📊 대시보드"}
-                    </Link>
 
                     {userDoc?.role === "student" && (
                       <>
@@ -140,11 +140,7 @@ export default function Navbar() {
                     )}
 
                     <div style={{ borderTop: "1px solid #1a1a24", marginTop: 4, paddingTop: 4 }}>
-                      <button onClick={handleLogout} style={{
-                        display: "block", width: "100%", padding: "9px 12px", borderRadius: 8,
-                        fontSize: 13, color: "#f87171", background: "none", border: "none",
-                        cursor: "pointer", textAlign: "left", fontWeight: 500,
-                      }}>
+                      <button onClick={handleLogout} style={{ display: "block", width: "100%", padding: "9px 12px", borderRadius: 8, fontSize: 13, color: "#f87171", background: "none", border: "none", cursor: "pointer", textAlign: "left", fontWeight: 500 }}>
                         🚪 로그아웃
                       </button>
                     </div>
@@ -192,7 +188,7 @@ export default function Navbar() {
           {firebaseUser ? (
             <>
               <Link href={dashboardPath} onClick={() => setMenuOpen(false)} style={{ padding: "12px 16px", borderRadius: 8, fontSize: 15, color: "#9999bb", textDecoration: "none" }}>
-                {userDoc?.role === "admin" ? "🔐 관리자" : "대시보드"}
+                {dashboardLabel}
               </Link>
               {userDoc?.role === "student" && (
                 <>
