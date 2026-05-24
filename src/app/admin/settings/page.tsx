@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
-import { doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, orderBy as fbOrderBy, limit, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, limit, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { uploadImage } from "@/lib/cloudinary";
 import { useDropzone } from "react-dropzone";
@@ -26,6 +26,16 @@ export default function AdminSettingsPage() {
   const [borderRadius, setBorderRadius] = useState<"rounded" | "square">("rounded");
   const [borderColor, setBorderColor] = useState("#2e2e3f");
   const [maxWidth, setMaxWidth] = useState("1280");
+
+  // 문의 정보
+  const [contact, setContact] = useState({
+    email: "admin@gumi.ac.kr",
+    phone: "",
+    address: "경북 구미시",
+    website: "",
+    kakao: "",
+  });
+
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [heroImages, setHeroImages] = useState<HeroImage[]>([]);
@@ -55,6 +65,7 @@ export default function AdminSettingsPage() {
         if (d.borderRadius) setBorderRadius(d.borderRadius);
         if (d.borderColor) setBorderColor(d.borderColor);
         if (d.maxWidth) setMaxWidth(d.maxWidth);
+        if (d.contact) setContact({ ...contact, ...d.contact });
       }
       const catSnap = await getDocs(collection(db, "categories"));
       setCategories(catSnap.docs.map((d) => ({ id: d.id, name: d.data().name })));
@@ -69,7 +80,11 @@ export default function AdminSettingsPage() {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      await setDoc(doc(db, "settings", "main"), { stats, ctaText, heroTitle, heroSubtitle, heroTagline, heroDescription, heroType, borderRadius, borderColor, maxWidth, updatedAt: serverTimestamp() }, { merge: true });
+      await setDoc(doc(db, "settings", "main"), {
+        stats, ctaText, heroTitle, heroSubtitle, heroTagline, heroDescription,
+        heroType, borderRadius, borderColor, maxWidth, contact,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
       toast.success("설정이 저장되었습니다!");
     } catch { toast.error("저장 실패"); }
     setSaving(false);
@@ -91,7 +106,6 @@ export default function AdminSettingsPage() {
   const deleteHeroImage = async (id: string) => {
     await deleteDoc(doc(db, "heroImages", id));
     setHeroImages((prev) => prev.filter((h) => h.id !== id));
-    toast.success("삭제됨");
   };
 
   const addFromWork = async (imageUrl: string) => {
@@ -100,10 +114,9 @@ export default function AdminSettingsPage() {
     const newOrder = heroImages.length;
     const ref = await addDoc(collection(db, "heroImages"), { url: imageUrl, order: newOrder, createdAt: serverTimestamp() });
     setHeroImages((prev) => [...prev, { id: ref.id, url: imageUrl, order: newOrder }]);
-    toast.success("히어로 이미지에 추가됐습니다!");
+    toast.success("추가됐습니다!");
   };
 
-  // 드래그 순서 변경
   const handleDragStart = (index: number) => setDragIndex(index);
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
@@ -116,11 +129,8 @@ export default function AdminSettingsPage() {
   };
   const handleDragEnd = async () => {
     setDragIndex(null);
-    // Firestore 순서 업데이트
     try {
-      await Promise.all(heroImages.map((img, i) =>
-        updateDoc(doc(db, "heroImages", img.id), { order: i })
-      ));
+      await Promise.all(heroImages.map((img, i) => updateDoc(doc(db, "heroImages", img.id), { order: i })));
       toast.success("순서가 저장되었습니다!");
     } catch { toast.error("순서 저장 실패"); }
   };
@@ -186,88 +196,61 @@ export default function AdminSettingsPage() {
         {/* 히어로 이미지 */}
         <div style={sectionStyle}>
           <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 20 }}>🖼️ 히어로 이미지 설정</h2>
-
-          {/* 표시 방식 */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: "block", fontSize: 12, color: "#9999bb", marginBottom: 10 }}>표시 방식</label>
             <div style={{ display: "flex", gap: 10 }}>
-              {[
-                { key: "grid", label: "📐 비대칭 그리드" },
-                { key: "square", label: "⬜ 정사각형 그리드" },
-                { key: "slide", label: "🎞️ 슬라이드" },
-              ].map((t) => (
+              {[{ key: "grid", label: "📐 비대칭 그리드" }, { key: "square", label: "⬜ 정사각형 그리드" }, { key: "slide", label: "🎞️ 슬라이드" }].map((t) => (
                 <button key={t.key} onClick={() => setHeroType(t.key as any)} style={{ flex: 1, padding: "12px", borderRadius: 10, cursor: "pointer", textAlign: "center", border: heroType === t.key ? "2px solid #6366f1" : "1px solid #2e2e3f", background: heroType === t.key ? "rgba(99,102,241,0.1)" : "#0a0a0f", fontWeight: 700, fontSize: 12, color: heroType === t.key ? "#818cf8" : "#9999bb" }}>{t.label}</button>
               ))}
             </div>
           </div>
 
-          {/* 현재 히어로 이미지 — 드래그 순서 변경 */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <label style={{ fontSize: 12, color: "#9999bb" }}>현재 히어로 이미지 ({heroImages.length}/9)</label>
               <span style={{ fontSize: 11, color: "#6366f1" }}>↕ 드래그로 순서 변경</span>
             </div>
-            {heroImages.length > 0 ? (
+            {heroImages.length > 0 && (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))", gap: 8, marginBottom: 16 }}>
                 {heroImages.map((h, i) => (
-                  <div
-                    key={h.id}
-                    draggable
-                    onDragStart={() => handleDragStart(i)}
-                    onDragOver={(e) => handleDragOver(e, i)}
-                    onDragEnd={handleDragEnd}
-                    style={{
-                      position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden",
-                      border: dragIndex === i ? "2px solid #6366f1" : "1px solid #2e2e3f",
-                      cursor: "grab", opacity: dragIndex === i ? 0.7 : 1,
-                    }}>
+                  <div key={h.id} draggable onDragStart={() => handleDragStart(i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd}
+                    style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", border: dragIndex === i ? "2px solid #6366f1" : "1px solid #2e2e3f", cursor: "grab", opacity: dragIndex === i ? 0.7 : 1 }}>
                     <img src={h.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    {/* 순서 번호 */}
-                    <div style={{ position: "absolute", top: 4, left: 4, background: "rgba(99,102,241,0.9)", color: "white", fontSize: 10, fontWeight: 700, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {i + 1}
-                    </div>
+                    <div style={{ position: "absolute", top: 4, left: 4, background: "rgba(99,102,241,0.9)", color: "white", fontSize: 10, fontWeight: 700, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</div>
                     <button onClick={() => deleteHeroImage(h.id)} style={{ position: "absolute", top: 4, right: 4, width: 20, height: 20, borderRadius: "50%", background: "rgba(239,68,68,0.8)", color: "white", border: "none", cursor: "pointer", fontSize: 10 }}>✕</button>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p style={{ color: "#55556e", fontSize: 13, marginBottom: 16 }}>등록된 이미지가 없습니다.</p>
             )}
           </div>
 
-          {/* 이미지 추가 탭 */}
           {heroImages.length < 9 && (
             <div style={{ border: "1px solid #2e2e3f", borderRadius: 12, overflow: "hidden" }}>
               <div style={{ display: "flex", borderBottom: "1px solid #2e2e3f" }}>
-                {[
-                  { key: "upload", label: "📁 새 이미지 업로드" },
-                  { key: "works", label: "🎨 기존 작품에서 선택" },
-                ].map((t) => (
+                {[{ key: "upload", label: "📁 새 이미지 업로드" }, { key: "works", label: "🎨 기존 작품에서 선택" }].map((t) => (
                   <button key={t.key} onClick={() => setActiveTab(t.key as any)} style={{ flex: 1, padding: "12px", fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none", background: activeTab === t.key ? "rgba(99,102,241,0.1)" : "#0a0a0f", color: activeTab === t.key ? "#818cf8" : "#55556e", borderBottom: activeTab === t.key ? "2px solid #6366f1" : "2px solid transparent" }}>{t.label}</button>
                 ))}
               </div>
               <div style={{ padding: 16 }}>
                 {activeTab === "upload" ? (
-                  <div {...getRootProps()} style={{ border: "2px dashed #2e2e3f", borderRadius: 10, padding: "24px", textAlign: "center", cursor: "pointer", background: "#0a0a0f" }}>
+                  <div {...getRootProps()} style={{ border: "2px dashed #2e2e3f", borderRadius: 10, padding: "20px", textAlign: "center", cursor: "pointer", background: "#0a0a0f" }}>
                     <input {...getInputProps()} />
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>📁</div>
-                    <p style={{ color: "#9999bb", fontSize: 13 }}>{uploadingHero ? "업로드 중..." : `클릭하거나 이미지를 드래그 (${9 - heroImages.length}장 더 추가 가능)`}</p>
+                    <div style={{ fontSize: 24, marginBottom: 8 }}>📁</div>
+                    <p style={{ color: "#9999bb", fontSize: 13 }}>{uploadingHero ? "업로드 중..." : `클릭하거나 드래그 (${9 - heroImages.length}장 더 추가 가능)`}</p>
                   </div>
                 ) : (
                   <div>
                     <p style={{ color: "#9999bb", fontSize: 13, marginBottom: 12 }}>작품 이미지를 클릭하면 히어로에 추가됩니다</p>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 8, maxHeight: 400, overflowY: "auto" }}>
-                      {allWorks.flatMap((w) =>
-                        (w.images || []).map((img, i) => {
-                          const isSelected = heroImages.some((h) => h.url === img);
-                          return (
-                            <div key={`${w.id}-${i}`} onClick={() => !isSelected && addFromWork(img)} style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", cursor: isSelected ? "default" : "pointer", border: isSelected ? "2px solid #6366f1" : "2px solid transparent", opacity: isSelected ? 0.6 : 1 }}>
-                              <img src={img} alt={w.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                              {isSelected && <div style={{ position: "absolute", inset: 0, background: "rgba(99,102,241,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>✓</div>}
-                            </div>
-                          );
-                        })
-                      )}
+                      {allWorks.flatMap((w) => (w.images || []).map((img, i) => {
+                        const isSelected = heroImages.some((h) => h.url === img);
+                        return (
+                          <div key={`${w.id}-${i}`} onClick={() => !isSelected && addFromWork(img)} style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", cursor: isSelected ? "default" : "pointer", border: isSelected ? "2px solid #6366f1" : "2px solid transparent", opacity: isSelected ? 0.6 : 1 }}>
+                            <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            {isSelected && <div style={{ position: "absolute", inset: 0, background: "rgba(99,102,241,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>✓</div>}
+                          </div>
+                        );
+                      }))}
                     </div>
                   </div>
                 )}
@@ -292,8 +275,8 @@ export default function AdminSettingsPage() {
           </div>
           <div>
             <label style={{ display: "block", fontSize: 12, color: "#9999bb", marginBottom: 10 }}>이미지 테두리 색상</label>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
-              <input type="color" value={borderColor === "transparent" ? "#000000" : borderColor} onChange={(e) => setBorderColor(e.target.value)} style={{ width: 48, height: 48, borderRadius: 8, cursor: "pointer", border: "none", background: "none", padding: 0 }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <input type="color" value={borderColor === "transparent" ? "#000000" : borderColor} onChange={(e) => setBorderColor(e.target.value)} style={{ width: 48, height: 48, borderRadius: 8, cursor: "pointer", border: "none", padding: 0 }} />
               <div style={{ display: "flex", gap: 8 }}>
                 {[{ color: "#2e2e3f", label: "기본" }, { color: "#6366f1", label: "인디고" }, { color: "#22d3ee", label: "시안" }, { color: "#ffffff", label: "흰색" }, { color: "#000000", label: "검정" }, { color: "transparent", label: "없음" }].map((p) => (
                   <button key={p.color} onClick={() => setBorderColor(p.color)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
@@ -310,7 +293,7 @@ export default function AdminSettingsPage() {
         <div style={sectionStyle}>
           <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>📐 레이아웃 설정</h2>
           <label style={{ display: "block", fontSize: 12, color: "#9999bb", marginBottom: 8 }}>홈페이지 최대 너비</label>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {["1280", "1440", "1600", "1920", "100%"].map((w) => (
               <button key={w} onClick={() => setMaxWidth(w)} style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", border: maxWidth === w ? "2px solid #6366f1" : "1px solid #2e2e3f", background: maxWidth === w ? "rgba(99,102,241,0.15)" : "#0a0a0f", color: maxWidth === w ? "#818cf8" : "#9999bb" }}>{w}{w !== "100%" ? "px" : " (전체)"}</button>
             ))}
@@ -336,6 +319,31 @@ export default function AdminSettingsPage() {
           <textarea value={ctaText} onChange={(e) => setCtaText(e.target.value)} rows={3} style={{ ...inputStyle, resize: "none" }} />
         </div>
 
+        {/* 📞 문의 정보 편집 */}
+        <div style={sectionStyle}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>📞 문의 정보 (푸터)</h2>
+          <p style={{ color: "#55556e", fontSize: 13, marginBottom: 20 }}>푸터 하단에 표시될 문의 정보를 입력하세요. 비워두면 표시되지 않습니다.</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {[
+              { key: "email", label: "📧 이메일", placeholder: "admin@gumi.ac.kr" },
+              { key: "phone", label: "📞 전화번호", placeholder: "054-000-0000" },
+              { key: "address", label: "📍 주소", placeholder: "경북 구미시" },
+              { key: "website", label: "🌐 학과 홈페이지 URL", placeholder: "https://gumi.ac.kr" },
+              { key: "kakao", label: "💬 카카오톡 오픈채팅 URL", placeholder: "https://open.kakao.com/..." },
+            ].map((f) => (
+              <div key={f.key}>
+                <label style={{ display: "block", fontSize: 12, color: "#9999bb", marginBottom: 6 }}>{f.label}</label>
+                <input
+                  value={(contact as any)[f.key]}
+                  onChange={(e) => setContact({ ...contact, [f.key]: e.target.value })}
+                  placeholder={f.placeholder}
+                  style={{ ...inputStyle, color: (contact as any)[f.key] ? "#f0f0ff" : "#55556e" }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
         <button onClick={saveSettings} disabled={saving} style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)", color: "white", padding: "14px", borderRadius: 10, fontSize: 15, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving ? 0.6 : 1, boxShadow: "0 4px 20px rgba(99,102,241,0.3)" }}>
           {saving ? "저장 중..." : "💾 모든 설정 저장하기"}
         </button>
@@ -354,6 +362,7 @@ export default function AdminSettingsPage() {
                 <button onClick={() => deleteCategory(c.id)} style={{ background: "none", border: "none", color: "#6366f1", cursor: "pointer", fontSize: 14, padding: 0 }}>✕</button>
               </div>
             ))}
+            {categories.length === 0 && <p style={{ color: "#55556e", fontSize: 13 }}>카테고리가 없습니다.</p>}
           </div>
         </div>
       </div>

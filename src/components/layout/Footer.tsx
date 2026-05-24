@@ -4,21 +4,49 @@ import { useEffect, useState } from "react";
 import { getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+interface ContactInfo {
+  email: string;
+  phone: string;
+  address: string;
+  website: string;
+  kakao: string;
+}
+
 export default function Footer() {
   const [maxWidth, setMaxWidth] = useState("1280");
+  const [contact, setContact] = useState<ContactInfo>({
+    email: "admin@gumi.ac.kr",
+    phone: "",
+    address: "경북 구미시",
+    website: "",
+    kakao: "",
+  });
 
   useEffect(() => {
     getDoc(doc(db, "settings", "main")).then((snap) => {
-      if (snap.exists() && snap.data().maxWidth) setMaxWidth(snap.data().maxWidth);
+      if (!snap.exists()) return;
+      const d = snap.data();
+      if (d.maxWidth) setMaxWidth(d.maxWidth);
+      if (d.contact) setContact({ ...contact, ...d.contact });
     }).catch(() => {});
   }, []);
 
   const mw = maxWidth === "100%" ? "100%" : `${maxWidth}px`;
 
+  const contactItems = [
+    contact.email    && { icon: "📧", label: contact.email, href: `mailto:${contact.email}` },
+    contact.phone    && { icon: "📞", label: contact.phone, href: `tel:${contact.phone}` },
+    contact.address  && { icon: "📍", label: contact.address, href: null },
+    contact.website  && { icon: "🌐", label: "학과 홈페이지", href: contact.website },
+    contact.kakao    && { icon: "💬", label: "카카오톡 문의", href: contact.kakao },
+  ].filter(Boolean) as { icon: string; label: string; href: string | null }[];
+
   return (
     <footer style={{ background: "#080810", borderTop: "1px solid #1a1a24", marginTop: 80 }}>
       <div style={{ maxWidth: mw, margin: "0 auto", padding: "60px 24px 40px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48 }} className="footer-grid">
+
+          {/* 브랜드 */}
           <div>
             <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", marginBottom: 16 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #6366f1, #22d3ee)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -33,15 +61,21 @@ export default function Footer() {
             </p>
           </div>
 
+          {/* 플랫폼 */}
           <div>
             <h4 style={{ fontSize: 11, fontWeight: 700, color: "#55556e", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 16 }}>플랫폼</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {[{ href: "/gallery", label: "갤러리" }, { href: "/register", label: "학생 가입" }, { href: "/register", label: "기업 가입" }, { href: "/login", label: "로그인" }].map((l) => (
-                <Link key={l.label} href={l.href} style={{ color: "#55556e", textDecoration: "none", fontSize: 13 }}>{l.label}</Link>
+                <Link key={l.label} href={l.href} style={{ color: "#55556e", textDecoration: "none", fontSize: 13 }}
+                  onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.color = "#818cf8"}
+                  onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.color = "#55556e"}>
+                  {l.label}
+                </Link>
               ))}
             </div>
           </div>
 
+          {/* 학과 */}
           <div>
             <h4 style={{ fontSize: 11, fontWeight: 700, color: "#55556e", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 16 }}>학과</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -51,11 +85,26 @@ export default function Footer() {
             </div>
           </div>
 
+          {/* 문의 — Firebase에서 불러온 정보 */}
           <div>
             <h4 style={{ fontSize: 11, fontWeight: 700, color: "#55556e", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 16 }}>문의</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <span style={{ color: "#55556e", fontSize: 13 }}>📧 admin@gumi.ac.kr</span>
-              <span style={{ color: "#55556e", fontSize: 13 }}>📍 경북 구미시</span>
+              {contactItems.length > 0 ? contactItems.map((item, i) => (
+                item.href ? (
+                  <a key={i} href={item.href} target={item.href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer"
+                    style={{ color: "#55556e", textDecoration: "none", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}
+                    onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.color = "#818cf8"}
+                    onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.color = "#55556e"}>
+                    <span>{item.icon}</span> {item.label}
+                  </a>
+                ) : (
+                  <span key={i} style={{ color: "#55556e", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                    <span>{item.icon}</span> {item.label}
+                  </span>
+                )
+              )) : (
+                <span style={{ color: "#2e2e3f", fontSize: 12 }}>관리자 설정에서 편집하세요</span>
+              )}
             </div>
           </div>
         </div>
