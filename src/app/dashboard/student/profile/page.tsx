@@ -61,6 +61,15 @@ export default function ProfilePage() {
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !firebaseUser) return;
+  
+    // ✅ 300KB 제한 추가
+    if (file.size > 300 * 1024) {
+      toast.error("이미지 크기는 300KB 이하여야 합니다.");
+      return;
+    }
+  
+    // 이후 기존 코드 그대로...
+  
     try {
       setUploadingImage(true);
       toast.loading("이미지 업로드 중...", { id: "img" });
