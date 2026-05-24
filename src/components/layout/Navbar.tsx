@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
@@ -27,6 +27,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [maxWidth, setMaxWidth] = useState("1280");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -37,10 +38,15 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
-    const close = () => setProfileMenuOpen(false);
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleLogout = async () => {
@@ -90,19 +96,22 @@ export default function Navbar() {
 
           {firebaseUser ? (
             <>
-              {/* 대시보드 링크 — 항상 표시 */}
+              {/* 대시보드 링크 */}
               <Link href={dashboardPath} style={{ padding: "8px 16px", borderRadius: 8, fontSize: 14, color: "#9999bb", textDecoration: "none", fontWeight: 500 }}>
                 {dashboardLabel}
               </Link>
 
               {/* 프로필 아바타 + 드롭다운 */}
-              <div style={{ position: "relative" }} onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  background: "none", border: "none", cursor: "pointer",
-                  padding: "4px 8px", borderRadius: 10,
-                }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 10, overflow: "hidden", flexShrink: 0, border: "2px solid #2e2e3f" }}>
+              <div ref={dropdownRef} style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  onClick={() => setProfileMenuOpen((prev) => !prev)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    background: "none", border: "none", cursor: "pointer",
+                    padding: "4px 8px", borderRadius: 10,
+                  }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, overflow: "hidden", flexShrink: 0, border: `2px solid ${profileMenuOpen ? "#6366f1" : "#2e2e3f"}`, transition: "border-color 0.2s" }}>
                     {profileImage ? (
                       <img src={profileImage} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
@@ -111,16 +120,17 @@ export default function Navbar() {
                       </div>
                     )}
                   </div>
-                  <span style={{ fontSize: 13, color: "#9999bb" }}>▾</span>
+                  <span style={{ fontSize: 12, color: "#55556e", transform: profileMenuOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", display: "inline-block" }}>▾</span>
                 </button>
 
-                {/* 드롭다운 */}
+                {/* 드롭다운 메뉴 */}
                 {profileMenuOpen && (
                   <div style={{
                     position: "absolute", top: "calc(100% + 8px)", right: 0,
                     background: "#111118", border: "1px solid #2e2e3f", borderRadius: 12,
-                    padding: 8, minWidth: 180, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 100,
+                    padding: 8, minWidth: 190, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", zIndex: 100,
                   }}>
+                    {/* 프로필 헤더 */}
                     <div style={{ padding: "10px 12px", borderBottom: "1px solid #1a1a24", marginBottom: 4 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: "#f0f0ff" }}>{displayName}</div>
                       <div style={{ fontSize: 11, color: "#55556e", marginTop: 2 }}>{userDoc?.email}</div>
@@ -128,19 +138,31 @@ export default function Navbar() {
 
                     {userDoc?.role === "student" && (
                       <>
-                        <Link href="/dashboard/student/profile" style={{ display: "block", padding: "9px 12px", borderRadius: 8, fontSize: 13, color: "#9999bb", textDecoration: "none" }}
-                          onClick={() => setProfileMenuOpen(false)}>
+                        <Link
+                          href="/dashboard/student/profile"
+                          onClick={() => setProfileMenuOpen(false)}
+                          style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 8, fontSize: 13, color: "#9999bb", textDecoration: "none" }}
+                          onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "#1a1a24"}
+                          onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                           👤 프로필 편집
                         </Link>
-                        <Link href={`/portfolio/${firebaseUser.uid}`} style={{ display: "block", padding: "9px 12px", borderRadius: 8, fontSize: 13, color: "#9999bb", textDecoration: "none" }}
-                          onClick={() => setProfileMenuOpen(false)}>
+                        <Link
+                          href={`/portfolio/${firebaseUser.uid}`}
+                          onClick={() => setProfileMenuOpen(false)}
+                          style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 8, fontSize: 13, color: "#9999bb", textDecoration: "none" }}
+                          onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "#1a1a24"}
+                          onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                           🎨 내 포트폴리오
                         </Link>
                       </>
                     )}
 
                     <div style={{ borderTop: "1px solid #1a1a24", marginTop: 4, paddingTop: 4 }}>
-                      <button onClick={handleLogout} style={{ display: "block", width: "100%", padding: "9px 12px", borderRadius: 8, fontSize: 13, color: "#f87171", background: "none", border: "none", cursor: "pointer", textAlign: "left", fontWeight: 500 }}>
+                      <button
+                        onClick={handleLogout}
+                        style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "9px 12px", borderRadius: 8, fontSize: 13, color: "#f87171", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
+                        onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.1)"}
+                        onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                         🚪 로그아웃
                       </button>
                     </div>
@@ -178,7 +200,9 @@ export default function Navbar() {
               </div>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "#f0f0ff" }}>{displayName}</div>
-                <div style={{ fontSize: 11, color: "#55556e" }}>{userDoc?.role === "student" ? "학생" : userDoc?.role === "company" ? "기업" : "관리자"}</div>
+                <div style={{ fontSize: 11, color: "#55556e" }}>
+                  {userDoc?.role === "student" ? "학생" : userDoc?.role === "company" ? "기업" : "관리자"}
+                </div>
               </div>
             </div>
           )}
