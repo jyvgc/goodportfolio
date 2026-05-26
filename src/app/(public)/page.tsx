@@ -8,87 +8,149 @@ import { db } from "@/lib/firebase";
 import { useAuthStore } from "@/store/authStore";
 import Script from "next/script";
 
-const DEFAULT_STATS = [
-  { value: "120+", label: "등록 학생" },
-  { value: "850+", label: "등록 작품" },
-  { value: "30+",  label: "협력 기업" },
-  { value: "95%",  label: "취업 연계율" },
-];
+// ── 상수 ──────────────────────────────────────────────
+const CACHE_KEY = "hero_settings_cache";
+
+const DEFAULT_HERO = {
+  heroTitle: "당신의",
+  heroSubtitle: "작품을",
+  heroTagline: "세상에.",
+  heroDescription: "웹툰 · 게임콘텐츠 학생들의 포트폴리오를 전시하고 산업체 인사 담당자와 직접 연결되는 플랫폼",
+  heroType: "grid" as "grid" | "slide" | "square",
+  borderRadius: "rounded" as "rounded" | "square",
+  borderColor: "#2e2e3f",
+  maxWidth: "1280",
+  ctaText: "학교 이메일로 가입하고 무료로 시작하세요",
+  stats: [
+    { value: "120+", label: "등록 학생" },
+    { value: "850+", label: "등록 작품" },
+    { value: "30+",  label: "협력 기업" },
+    { value: "95%",  label: "취업 연계율" },
+  ],
+};
+
 const CATEGORIES = ["ALL", "웹툰", "게임아트", "캐릭터", "배경", "UI/UX", "3D"];
 
 interface Work { id: string; title: string; category: string; images: string[]; authorUid: string; tools: string[]; viewCount: number; }
 interface Notice { id: string; title: string; content: string; }
 
+// ── 컴포넌트 ──────────────────────────────────────────
 export default function HomePage() {
   const { firebaseUser, userDoc } = useAuthStore();
+
+  // ── state ──
   const [works, setWorks] = useState<Work[]>([]);
   const [heroImages, setHeroImages] = useState<string[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
-  const [stats, setStats] = useState(DEFAULT_STATS);
-  const [ctaText, setCtaText] = useState("학교 이메일로 가입하고 무료로 시작하세요");
-  const [heroTitle, setHeroTitle] = useState("당신의");
-  const [heroSubtitle, setHeroSubtitle] = useState("작품을");
-  const [heroTagline, setHeroTagline] = useState("세상에.");
-  const [heroDescription, setHeroDescription] = useState("웹툰 · 게임콘텐츠 학생들의 포트폴리오를 전시하고 산업체 인사 담당자와 직접 연결되는 플랫폼");
-  const [heroType, setHeroType] = useState<"grid" | "slide" | "square">("grid");
-  const [borderRadius, setBorderRadius] = useState<"rounded" | "square">("rounded");
-  const [borderColor, setBorderColor] = useState("#2e2e3f");
-  const [maxWidth, setMaxWidth] = useState("1280");
+
+  // 히어로 설정: localStorage 캐시 → Firebase 순으로 적용
+  const [heroTitle,       setHeroTitle]       = useState(DEFAULT_HERO.heroTitle);
+  const [heroSubtitle,    setHeroSubtitle]    = useState(DEFAULT_HERO.heroSubtitle);
+  const [heroTagline,     setHeroTagline]     = useState(DEFAULT_HERO.heroTagline);
+  const [heroDescription, setHeroDescription] = useState(DEFAULT_HERO.heroDescription);
+  const [heroType,        setHeroType]        = useState<"grid" | "slide" | "square">(DEFAULT_HERO.heroType);
+  const [borderRadius,    setBorderRadius]    = useState<"rounded" | "square">(DEFAULT_HERO.borderRadius);
+  const [borderColor,     setBorderColor]     = useState(DEFAULT_HERO.borderColor);
+  const [maxWidth,        setMaxWidth]        = useState(DEFAULT_HERO.maxWidth);
+  const [ctaText,         setCtaText]         = useState(DEFAULT_HERO.ctaText);
+  const [stats,           setStats]           = useState(DEFAULT_HERO.stats);
+
+  // 깜빡임 방지: localStorage 로드 완료 or Firebase 로드 완료 시 true
+  const [isLoaded, setIsLoaded] = useState(false);
+
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [slideIndex, setSlideIndex] = useState(0);
   const slideTimer = useRef<any>(null);
 
+  // ── 설정값 한 번에 적용하는 헬퍼 ──
+  const applySettings = (d: Record<string, any>) => {
+    if (d.heroTitle)       setHeroTitle(d.heroTitle);
+    if (d.heroSubtitle)    setHeroSubtitle(d.heroSubtitle);
+    if (d.heroTagline)     setHeroTagline(d.heroTagline);
+    if (d.heroDescription) setHeroDescription(d.heroDescription);
+    if (d.heroType)        setHeroType(d.heroType);
+    if (d.borderRadius)    setBorderRadius(d.borderRadius);
+    if (d.borderColor)     setBorderColor(d.borderColor);
+    if (d.maxWidth)        setMaxWidth(d.maxWidth);
+    if (d.ctaText)         setCtaText(d.ctaText);
+    if (d.stats)           setStats([
+      { value: d.stats.students,  label: "등록 학생" },
+      { value: d.stats.works,     label: "등록 작품" },
+      { value: d.stats.companies, label: "협력 기업" },
+      { value: d.stats.employment,label: "취업 연계율" },
+    ]);
+  };
+
+  // ── 메인 useEffect ──
   useEffect(() => {
+    // 1) localStorage 캐시 즉시 적용 → 깜빡임 없음
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        applySettings(JSON.parse(cached));
+      } catch {}
+      setIsLoaded(true); // 캐시가 있으면 바로 표시
+    }
+
+    // 2) Firebase에서 최신값 fetch
     const fetchAll = async () => {
       try {
-        const wq = query(collection(db, "works"), where("isPublic", "==", true), orderBy("createdAt", "desc"), limit(12));
+        const wq = query(
+          collection(db, "works"),
+          where("isPublic", "==", true),
+          orderBy("createdAt", "desc"),
+          limit(12)
+        );
         const [wSnap, hSnap, sSnap, nSnap] = await Promise.all([
           getDocs(wq),
           getDocs(collection(db, "heroImages")),
           getDoc(doc(db, "settings", "main")),
           getDocs(query(collection(db, "notices"), orderBy("createdAt", "desc"), limit(3))),
         ]);
+
         setWorks(wSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Work)));
         setHeroImages(hSnap.docs.map((d) => d.data().url as string));
         setNotices(nSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Notice)));
+
         if (sSnap.exists()) {
-          const d = sSnap.data();
-          if (d.stats) setStats([
-            { value: d.stats.students, label: "등록 학생" },
-            { value: d.stats.works, label: "등록 작품" },
-            { value: d.stats.companies, label: "협력 기업" },
-            { value: d.stats.employment, label: "취업 연계율" },
-          ]);
-          if (d.ctaText) setCtaText(d.ctaText);
-          if (d.heroTitle) setHeroTitle(d.heroTitle);
-          if (d.heroSubtitle) setHeroSubtitle(d.heroSubtitle);
-          if (d.heroTagline) setHeroTagline(d.heroTagline);
-          if (d.heroDescription) setHeroDescription(d.heroDescription);
-          if (d.heroType) setHeroType(d.heroType);
-          if (d.borderRadius) setBorderRadius(d.borderRadius);
-          if (d.borderColor) setBorderColor(d.borderColor);
-          if (d.maxWidth) setMaxWidth(d.maxWidth);
+          const data = sSnap.data();
+          applySettings(data);
+          // 최신값을 localStorage에 저장 (다음 방문 시 캐시로 활용)
+          localStorage.setItem(CACHE_KEY, JSON.stringify(data));
         }
-      } catch (e) { console.error(e); }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsLoaded(true); // 캐시 없는 첫 방문도 여기서 표시
+      }
     };
+
     fetchAll();
   }, []);
 
+  // ── 슬라이드 타이머 ──
   useEffect(() => {
     if (heroType === "slide" && gridImages.length > 1) {
-      slideTimer.current = setInterval(() => setSlideIndex((prev) => (prev + 1) % gridImages.length), 3000);
+      slideTimer.current = setInterval(
+        () => setSlideIndex((prev) => (prev + 1) % gridImages.length),
+        3000
+      );
       return () => clearInterval(slideTimer.current);
     }
   }, [heroType, heroImages]);
 
-  const gridImages = heroImages.length > 0 ? heroImages : works.map((w) => w.images?.[0]).filter(Boolean) as string[];
+  // ── 파생값 ──
+  const gridImages = heroImages.length > 0
+    ? heroImages
+    : (works.map((w) => w.images?.[0]).filter(Boolean) as string[]);
   const filtered = selectedCategory === "ALL" ? works : works.filter((w) => w.category === selectedCategory);
   const br = borderRadius === "rounded" ? 14 : 0;
   const bc = borderColor === "transparent" ? "transparent" : borderColor;
   const mw = maxWidth === "100%" ? "100%" : `${maxWidth}px`;
+  const isStudent = firebaseUser && userDoc?.role === "student";
 
   const cardStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
-    borderRadius: br, overflow: "hidden", background: "#1a1a24", border: `1px solid ${bc}`, ...extra
+    borderRadius: br, overflow: "hidden", background: "#1a1a24", border: `1px solid ${bc}`, ...extra,
   });
 
   const jsonLd = {
@@ -99,16 +161,25 @@ export default function HomePage() {
     "description": "구미대학교 웹툰·게임콘텐츠 학생 포트폴리오 플랫폼",
   };
 
-  // 학생 로그인 여부
-  const isStudent = firebaseUser && userDoc?.role === "student";
-
+  // ── JSX ──
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#0a0a0f", color: "#f0f0ff" }}>
       <Script id="json-ld" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Navbar />
 
       {/* ── 히어로 ── */}
-      <section style={{ minHeight: "100vh", paddingTop: 80, position: "relative", overflow: "hidden", background: "linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%)" }}>
+      {/* isLoaded 전까지 opacity:0 → 깜빡임 완전 차단 */}
+      <section
+        style={{
+          minHeight: "100vh",
+          paddingTop: 80,
+          position: "relative",
+          overflow: "hidden",
+          background: "linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%)",
+          opacity: isLoaded ? 1 : 0,
+          transition: "opacity 0.3s ease-in",
+        }}
+      >
         <div style={{ position: "absolute", top: "30%", left: "40%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
         <div style={{ maxWidth: mw, margin: "0 auto", padding: "60px 24px 40px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
@@ -128,7 +199,6 @@ export default function HomePage() {
                 <Link href="/gallery" style={{ background: "#6366f1", color: "white", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>
                   포트폴리오 보기 →
                 </Link>
-                {/* 3번: 학생 로그인 시 작품등록 버튼, 비로그인 시 회원가입 버튼 */}
                 {isStudent ? (
                   <Link href="/dashboard/student/works/new" style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white", padding: "12px 32px", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 15 }}>
                     🎨 작품 등록
