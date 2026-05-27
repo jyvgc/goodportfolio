@@ -26,7 +26,7 @@ export default function StudentDashboard() {
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:40, flexWrap:"wrap", gap:16 }}>
           <div>
             <h1 style={{ fontSize:28, fontWeight:900 }}>내 대시보드</h1>
-            <p style={{ color:"#9999bb", marginTop:4 }}>{userDoc?.name ?? ""} 님, 환영합니다!</p>
+            <p style={{ color:"#9999bb", marginTop:4 }}>{(userDoc as any)?.name ?? ""} 님, 환영합니다!</p>
           </div>
           <div style={{ display:"flex", gap:12 }}>
             <Link href="/dashboard/student/profile" style={{ border:"1px solid #3d3d52", color:"#9999bb", padding:"10px 20px", borderRadius:8, textDecoration:"none", fontWeight:600, fontSize:14 }}>프로필 편집</Link>
