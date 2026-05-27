@@ -99,7 +99,7 @@ export default function CompanyDashboard() {
               <div key={item.id} style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:14, padding:20 }}>
                 <div style={{ display:"flex", gap:16, alignItems:"flex-start" }}>
                   {/* 썸네일 */}
-                  <Link href={`/work/${item.workId}`} style={{ flexShrink:0 }}>
+                  <Link href={item.workId ? `/work/${item.workId}` : `/portfolio/${item.authorUid}`} style={{ flexShrink:0 }}>
                     <div style={{ width:80, height:80, borderRadius:10, overflow:"hidden", background:"#1a1a24" }}>
                       {item.workImage
                         ? <img src={item.workImage} alt={item.workTitle} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
@@ -111,7 +111,8 @@ export default function CompanyDashboard() {
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8, marginBottom:6 }}>
                       <div>
-                        <Link href={`/work/${item.workId}`} style={{ fontWeight:700, fontSize:16, color:"#f0f0ff", textDecoration:"none" }}>{item.workTitle}</Link>
+                       <Link href={item.workId ? `/work/${item.workId}` : `/portfolio/${item.authorUid}`} style={{ fontWeight:700, fontSize:16, color:"#f0f0ff", textDecoration:"none" }}>
+
                         <div style={{ color:"#818cf8", fontSize:13, marginTop:2 }}>👤 {item.authorName}</div>
                       </div>
                       <div style={{ color:"#55556e", fontSize:12, textAlign:"right" }}>
