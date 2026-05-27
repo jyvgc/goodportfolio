@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -12,10 +13,11 @@ export default function StudentDashboard() {
   const { firebaseUser, userDoc } = useAuthStore();
   const [works, setWorks] = useState<Work[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     if (!firebaseUser) return;
-    (async () => {
+        (async () => {
       try {
         // orderBy 제거 → Firestore 복합 인덱스 오류 방지, 클라이언트에서 정렬
         const q = query(collection(db,"works"), where("authorUid","==",firebaseUser.uid));
@@ -27,7 +29,11 @@ export default function StudentDashboard() {
       } catch(e) { console.error("works fetch error:", e); }
       finally { setLoading(false); }
     })();
-  }, [firebaseUser]);
+ // 관리자/기업이 잘못 접근하면 올바른 페이지로 리디렉션
+  if (userDoc?.role === "admin") { router.replace("/admin"); return; }
+  if (userDoc?.role === "company") { router.replace("/dashboard/company"); return; }
+  // ... 기존 코드
+}, [firebaseUser, userDoc]);
 
   const cat = (c:string|string[]) => Array.isArray(c) ? c.join(", ") : c;
 
