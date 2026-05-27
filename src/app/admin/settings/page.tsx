@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 
 export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
@@ -87,10 +89,13 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div style={{ padding:32, background:"#0a0a0f", color:"#f0f0ff", minHeight:"100vh" }}>
-      <div style={{ maxWidth:800, margin:"0 auto" }}>
+    <div style={{ minHeight:"100vh", background:"#0a0a0f", color:"#f0f0ff" }}>
+      <Navbar />
+      <div style={{ maxWidth:800, margin:"0 auto", padding:"100px 24px 60px" }}>
         <h1 style={{ fontSize:24, fontWeight:900, marginBottom:32 }}>사이트 설정</h1>
+
         {section("🏷 상단 뱃지 텍스트", inp("뱃지 문구", heroBadgeText, setHeroBadgeText, "구미대학교 공식 포트폴리오 플랫폼"))}
+
         {section("🖼 히어로 섹션", <>
           {inp("메인 타이틀 1줄", heroTitle, setHeroTitle)}
           {inp("메인 타이틀 2줄 (그라데이션)", heroSubtitle, setHeroSubtitle)}
@@ -101,15 +106,20 @@ export default function AdminSettingsPage() {
             <label style={{ display:"block", color:"#9999bb", fontSize:13, marginBottom:6 }}>히어로 이미지 타입</label>
             <select value={heroType} onChange={(e) => setHeroType(e.target.value as any)}
               style={{ width:"100%", background:"#1a1a24", border:"1px solid #2e2e3f", borderRadius:8, color:"#f0f0ff", padding:"10px 14px", fontSize:14 }}>
-              <option value="grid">Grid</option><option value="slide">Slide</option><option value="square">Square</option>
+              <option value="grid">Grid</option>
+              <option value="slide">Slide</option>
+              <option value="square">Square</option>
             </select>
           </div>
         </>)}
+
         {section("📊 통계", <>
           {(["students","works","companies","employment"] as const).map((k) =>
-            inp(k==="students"?"등록 학생":k==="works"?"등록 작품":k==="companies"?"협력 기업":"취업 연계율", stats[k], (v) => setStats((p) => ({...p,[k]:v})))
+            inp(k==="students"?"등록 학생":k==="works"?"등록 작품":k==="companies"?"협력 기업":"취업 연계율",
+              stats[k], (v) => setStats((p) => ({...p,[k]:v})))
           )}
         </>)}
+
         {section("🏷 카테고리 관리", <>
           {chipList(categories, (c) => setCategories((p) => p.filter((x) => x!==c)))}
           <div style={{ display:"flex", gap:8, marginTop:16 }}>
@@ -121,6 +131,7 @@ export default function AdminSettingsPage() {
               style={{ background:"#6366f1", color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:600, cursor:"pointer" }}>추가</button>
           </div>
         </>)}
+
         {section("🔧 사용 툴 관리", <>
           {chipList(tools, (t) => setTools((p) => p.filter((x) => x!==t)))}
           <div style={{ display:"flex", gap:8, marginTop:16 }}>
@@ -132,21 +143,25 @@ export default function AdminSettingsPage() {
               style={{ background:"#6366f1", color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:600, cursor:"pointer" }}>추가</button>
           </div>
         </>)}
+
         {section("🔗 SNS 링크 설정",
           <div style={{ display:"flex", alignItems:"center", gap:16 }}>
             <span style={{ color:"#9999bb", fontSize:14 }}>학생 프로필 SNS 링크 기능</span>
             <button onClick={() => setSnsEnabled((p) => !p)}
               style={{ padding:"8px 24px", borderRadius:999, fontWeight:700, fontSize:13, border:"none", cursor:"pointer",
-                background:snsEnabled?"rgba(16,185,129,0.15)":"rgba(239,68,68,0.15)", color:snsEnabled?"#10b981":"#ef4444" }}>
+                background:snsEnabled?"rgba(16,185,129,0.15)":"rgba(239,68,68,0.15)",
+                color:snsEnabled?"#10b981":"#ef4444" }}>
               {snsEnabled?"✅ 사용함":"❌ 사용 안함"}
             </button>
           </div>
         )}
+
         <button onClick={save} disabled={saving}
           style={{ width:"100%", background:saving?"#3d3d52":"#6366f1", color:"#fff", border:"none", borderRadius:12, padding:"16px 0", fontWeight:700, fontSize:16, cursor:saving?"not-allowed":"pointer" }}>
           {saving?"저장 중...":done?"✅ 저장 완료!":"전체 설정 저장"}
         </button>
       </div>
+      <Footer />
     </div>
   );
 }

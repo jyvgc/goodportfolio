@@ -74,7 +74,7 @@ export default function NewWorkPage() {
       const urls = await Promise.all(files.map(uploadToCloudinary));
       await addDoc(collection(db,"works"), {
         title, description, category:selectedCats, tools:selectedTools,
-        images:urls, authorUid:firebaseUser.uid, authorName:userDoc.name??"",
+        images:urls, authorUid:firebaseUser.uid, authorName:userDoc.displayName??"",
         isPublic, viewCount:0, createdAt:serverTimestamp(),
       });
       router.push("/dashboard/student");
