@@ -32,7 +32,7 @@ export default function StudentProfilePage() {
           displayName:     u.displayName ?? "",
           bio:             p.bio         ?? "",
           department:      p.department  ?? "",
-          graduationStatus: p.grade === 0 ? "졸업예정자" : "졸업반",
+          graduationStatus: p.grade === 0 ? "졸업예정자" : "졸업예정자",
           instagram:       p.snsLinks?.instagram ?? "",
           twitter:         p.snsLinks?.twitter   ?? "",
           behance:         p.snsLinks?.behance    ?? "",
@@ -57,7 +57,7 @@ export default function StudentProfilePage() {
       await setDoc(doc(db, "studentProfiles", firebaseUser.uid), {
         bio: form.bio,
         department: form.department,
-        grade: form.graduationStatus === "졸업생" ? 0 : 3,
+        grade: form.graduationStatus === "졸업예정자" ? 0 : 3,
         snsLinks: {
           instagram: form.instagram,
           twitter:   form.twitter,
@@ -118,7 +118,7 @@ export default function StudentProfilePage() {
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: "block", color: "#9999bb", fontSize: 13, marginBottom: 8 }}>졸업 상태</label>
             <div style={{ display: "flex", gap: 8 }}>
-              {["졸업반", "졸업생"].map((s) => (
+              {["졸업예정자", "졸업생"].map((s) => (
                 <button key={s} type="button" onClick={() => setForm((p) => ({ ...p, graduationStatus: s }))}
                   style={{ flex: 1, padding: "10px", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13,
                     border: form.graduationStatus === s ? "2px solid #6366f1" : "1px solid #2e2e3f",
