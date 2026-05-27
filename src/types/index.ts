@@ -9,6 +9,7 @@ export interface UserDoc {
   displayName: string;
   profileImage: string;
   isApproved: boolean;
+  isActive?: boolean;
   createdAt: Timestamp;
 }
 
