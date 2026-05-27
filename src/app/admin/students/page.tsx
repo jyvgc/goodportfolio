@@ -79,7 +79,10 @@ export default function AdminStudentsPage() {
 
   const fmt = (ts: any) => {
     if (!ts) return "-";
-    try { const d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString("ko-KR"); } catch { return "-"; }
+    try {
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleDateString("ko-KR");
+    } catch { return "-"; }
   };
 
   const filtered = students.filter((s) =>
@@ -93,16 +96,22 @@ export default function AdminStudentsPage() {
       <Navbar />
       <div style={{ maxWidth:1100, margin:"0 auto", padding:"100px 24px 60px" }}>
         <h1 style={{ fontSize:24, fontWeight:900, marginBottom:8 }}>학생 관리</h1>
-        <p style={{ color:"#55556e", fontSize:13, marginBottom:24 }}>전체 {students.length}명 · 활성화된 학생의 작품만 갤러리에 공개됩니다.</p>
+        <p style={{ color:"#55556e", fontSize:13, marginBottom:24 }}>
+          전체 {students.length}명 · 활성화된 학생의 작품만 갤러리에 공개됩니다.
+        </p>
 
-        <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="이름 / 이메일 / 학과 검색"
+        <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          placeholder="이름 / 이메일 / 학과 검색"
           style={{ width:"100%", maxWidth:400, background:"#111118", border:"1px solid #2e2e3f", borderRadius:8, color:"#f0f0ff", padding:"10px 14px", fontSize:14, marginBottom:20, boxSizing:"border-box" }} />
 
-        {loading ? <div style={{ textAlign:"center", padding:60, color:"#55556e" }}>⏳ 불러오는 중...</div> : (
+        {loading ? (
+          <div style={{ textAlign:"center", padding:60, color:"#55556e" }}>⏳ 불러오는 중...</div>
+        ) : (
           <>
             <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:24 }}>
               {paginated.map((s) => (
-                <div key={s.id} style={{ background:"#111118", border:`1px solid ${selected?.id===s.id?"#6366f1":"#2e2e3f"}`, borderRadius:10, padding:"14px 20px", display:"flex", alignItems:"center", gap:16, flexWrap:"wrap", cursor:"pointer" }}
+                <div key={s.id}
+                  style={{ background:"#111118", border:`1px solid ${selected?.id===s.id?"#6366f1":"#2e2e3f"}`, borderRadius:10, padding:"14px 20px", display:"flex", alignItems:"center", gap:16, flexWrap:"wrap", cursor:"pointer" }}
                   onClick={() => openDetail(s)}>
                   <div style={{ width:44, height:44, borderRadius:10, overflow:"hidden", flexShrink:0, background:"linear-gradient(135deg,#6366f1,#22d3ee)" }}>
                     {s.profileImage
@@ -112,7 +121,9 @@ export default function AdminStudentsPage() {
                   <div style={{ flex:1, minWidth:140 }}>
                     <div style={{ fontWeight:700, fontSize:15 }}>{s.displayName || "(이름 없음)"}</div>
                     <div style={{ color:"#9999bb", fontSize:13 }}>{s.email}</div>
-                    <div style={{ color:"#55556e", fontSize:12, marginTop:2 }}>{s.department||"-"} · 작품 {s.workCount}개 · 가입 {fmt(s.createdAt)}</div>
+                    <div style={{ color:"#55556e", fontSize:12, marginTop:2 }}>
+                      {s.department||"-"} · 작품 {s.workCount}개 · 가입 {fmt(s.createdAt)}
+                    </div>
                   </div>
                   <div style={{ display:"flex", gap:8 }} onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => toggleActive(s.id, s.isActive)}
@@ -128,13 +139,18 @@ export default function AdminStudentsPage() {
                   </div>
                 </div>
               ))}
-              {paginated.length === 0 && <p style={{ color:"#55556e", textAlign:"center", padding:40 }}>학생이 없습니다.</p>}
+              {paginated.length === 0 && (
+                <p style={{ color:"#55556e", textAlign:"center", padding:40 }}>학생이 없습니다.</p>
+              )}
             </div>
 
+            {/* 페이지네이션 */}
             {totalPages > 1 && (
               <div style={{ display:"flex", justifyContent:"center", gap:8 }}>
                 <button onClick={() => setPage((p) => Math.max(1, p-1))} disabled={page===1}
-                  style={{ padding:"8px 16px", borderRadius:8, background:"#111118", border:"1px solid #2e2e3f", color:page===1?"#3d3d52":"#9999bb", cursor:page===1?"not-allowed":"pointer" }}>‹ 이전</button>
+                  style={{ padding:"8px 16px", borderRadius:8, background:"#111118", border:"1px solid #2e2e3f", color:page===1?"#3d3d52":"#9999bb", cursor:page===1?"not-allowed":"pointer" }}>
+                  ‹ 이전
+                </button>
                 {Array.from({ length: totalPages }, (_, i) => i+1).map((n) => (
                   <button key={n} onClick={() => setPage(n)}
                     style={{ padding:"8px 14px", borderRadius:8, background:page===n?"#6366f1":"#111118", border:"1px solid #2e2e3f", color:page===n?"white":"#9999bb", cursor:"pointer", fontWeight:page===n?700:400 }}>
@@ -142,16 +158,23 @@ export default function AdminStudentsPage() {
                   </button>
                 ))}
                 <button onClick={() => setPage((p) => Math.min(totalPages, p+1))} disabled={page===totalPages}
-                  style={{ padding:"8px 16px", borderRadius:8, background:"#111118", border:"1px solid #2e2e3f", color:page===totalPages?"#3d3d52":"#9999bb", cursor:page===totalPages?"not-allowed":"pointer" }}>다음 ›</button>
+                  style={{ padding:"8px 16px", borderRadius:8, background:"#111118", border:"1px solid #2e2e3f", color:page===totalPages?"#3d3d52":"#9999bb", cursor:page===totalPages?"not-allowed":"pointer" }}>
+                  다음 ›
+                </button>
               </div>
             )}
           </>
         )}
       </div>
 
+      {/* 상세 모달 */}
       {selected && (
-        <div onClick={() => setSelected(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:16, maxWidth:640, width:"100%", maxHeight:"85vh", overflow:"auto", padding:32 }}>
+        <div onClick={() => setSelected(null)}
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:16, maxWidth:640, width:"100%", maxHeight:"85vh", overflow:"auto", padding:32 }}>
+
+            {/* 모달 헤더 */}
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:24 }}>
               <div style={{ display:"flex", gap:16, alignItems:"center" }}>
                 <div style={{ width:64, height:64, borderRadius:14, overflow:"hidden", background:"linear-gradient(135deg,#6366f1,#22d3ee)", flexShrink:0 }}>
@@ -165,9 +188,11 @@ export default function AdminStudentsPage() {
                   <div style={{ color:"#55556e", fontSize:12, marginTop:2 }}>가입일: {fmt(selected.createdAt)}</div>
                 </div>
               </div>
-              <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:"#55556e", fontSize:20, cursor:"pointer" }}>✕</button>
+              <button onClick={() => setSelected(null)}
+                style={{ background:"none", border:"none", color:"#55556e", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
 
+            {/* 상세 정보 */}
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:24 }}>
               {[
                 { label:"학과", value:selected.department||"-" },
@@ -182,6 +207,7 @@ export default function AdminStudentsPage() {
               ))}
             </div>
 
+            {/* 액션 버튼 */}
             <div style={{ display:"flex", gap:8, marginBottom:24 }}>
               <button onClick={() => toggleActive(selected.id, selected.isActive)}
                 style={{ flex:1, padding:"10px 0", borderRadius:8, fontWeight:700, fontSize:14, border:"none", cursor:"pointer",
@@ -190,28 +216,40 @@ export default function AdminStudentsPage() {
                 {selected.isActive?"❌ 비활성화":"✅ 활성화"}
               </button>
               <Link href={`/portfolio/${selected.id}`} target="_blank"
-                style={{ flex:1, padding:"10px 0", borderRadius:8, fontWeight:700, fontSize:14, textDecoration:"none", textAlign:"center", background:"rgba(99,102,241,0.15)", color:"#818cf8" }}>
+                style={{ flex:1, padding:"10px 0", borderRadius:8, fontWeight:700, fontSize:14, textDecoration:"none", textAlign:"center",
+                  background:"rgba(99,102,241,0.15)", color:"#818cf8" }}>
                 🎨 포트폴리오 보기
               </Link>
               <button onClick={() => deleteStudent(selected.id)}
-                style={{ padding:"10px 20px", borderRadius:8, fontWeight:700, fontSize:14, border:"none", cursor:"pointer", background:"rgba(239,68,68,0.15)", color:"#ef4444" }}>
+                style={{ padding:"10px 20px", borderRadius:8, fontWeight:700, fontSize:14, border:"none", cursor:"pointer",
+                  background:"rgba(239,68,68,0.15)", color:"#ef4444" }}>
                 🗑 삭제
               </button>
             </div>
 
+            {/* 작품 목록 */}
             <div>
-              <h3 style={{ fontSize:15, fontWeight:700, color:"#818cf8", marginBottom:16 }}>등록 작품 ({selectedWorks.length})</h3>
-              {worksLoading ? <p style={{ color:"#55556e" }}>⏳ 불러오는 중...</p>
-              : selectedWorks.length === 0 ? <p style={{ color:"#55556e", fontSize:13 }}>등록된 작품이 없습니다.</p>
-              : <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <h3 style={{ fontSize:15, fontWeight:700, color:"#818cf8", marginBottom:16 }}>
+                등록 작품 ({selectedWorks.length})
+              </h3>
+              {worksLoading ? (
+                <p style={{ color:"#55556e" }}>⏳ 불러오는 중...</p>
+              ) : selectedWorks.length === 0 ? (
+                <p style={{ color:"#55556e", fontSize:13 }}>등록된 작품이 없습니다.</p>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {selectedWorks.map((w: any) => (
                     <div key={w.id} style={{ display:"flex", alignItems:"center", gap:12, background:"#1a1a24", borderRadius:8, padding:"10px 14px" }}>
                       <div style={{ width:48, height:48, borderRadius:6, overflow:"hidden", background:"#2e2e3f", flexShrink:0 }}>
-                        {w.images?.[0] ? <img src={w.images[0]} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center" }}>🎨</div>}
+                        {w.images?.[0]
+                          ? <img src={w.images[0]} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                          : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center" }}>🎨</div>}
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontWeight:600, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{w.title}</div>
-                        <div style={{ color:"#55556e", fontSize:12 }}>{Array.isArray(w.category)?w.category.join(", "):w.category}</div>
+                        <div style={{ color:"#55556e", fontSize:12 }}>
+                          {Array.isArray(w.category) ? w.category.join(", ") : w.category}
+                        </div>
                       </div>
                       <button onClick={() => toggleWorkPublic(w.id, w.isPublic)}
                         style={{ padding:"4px 12px", borderRadius:999, fontSize:11, fontWeight:600, border:"none", cursor:"pointer",
@@ -221,7 +259,8 @@ export default function AdminStudentsPage() {
                       </button>
                     </div>
                   ))}
-                </div>}
+                </div>
+              )}
             </div>
           </div>
         </div>
