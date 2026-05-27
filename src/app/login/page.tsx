@@ -53,7 +53,7 @@ export default function LoginPage() {
     try {
       setLoading(true);
       const cred = await loginWithGoogle("student");
-      const snap = await getDoc(doc(db, "users", cred.user.uid));
+      const snap = await getDoc(doc(db, "users", cred.uid));
       const role = snap.exists() ? snap.data().role : "student";
       toast.success("로그인 성공!");
       router.push(getDashboardPath(role));
