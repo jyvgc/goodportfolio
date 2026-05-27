@@ -131,7 +131,7 @@ export default function WorkDetailPage() {
           {/* 오른쪽 — 정보 */}
           <div style={{ position: "sticky", top: 100 }}>
             <span style={{ display: "inline-block", padding: "4px 14px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: "rgba(99,102,241,0.2)", color: "#818cf8", border: "1px solid rgba(99,102,241,0.3)", marginBottom: 16 }}>
-              {work.category}
+              {Array.isArray(work.category) ? work.category.join(", ") : work.category}
             </span>
             <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 16, lineHeight: 1.3 }}>{work.title}</h1>
 
