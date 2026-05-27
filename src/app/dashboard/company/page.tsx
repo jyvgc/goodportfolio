@@ -65,6 +65,10 @@ export default function CompanyDashboard() {
     } catch { return "-"; }
   };
 
+  // workId가 있으면 작품 페이지, 없으면 학생 포트폴리오 페이지로 이동
+  const getLink = (item: SavedPortfolio) =>
+    item.workId ? `/work/${item.workId}` : `/portfolio/${item.authorUid}`;
+
   return (
     <div style={{ minHeight:"100vh", background:"#0a0a0f", color:"#f0f0ff" }}>
       <Navbar />
@@ -91,7 +95,9 @@ export default function CompanyDashboard() {
           <div style={{ textAlign:"center", padding:"80px 0", color:"#55556e" }}>
             <div style={{ fontSize:48, marginBottom:12 }}>🔖</div>
             <p>아직 등록한 관심 포트폴리오가 없습니다.</p>
-            <Link href="/gallery" style={{ color:"#6366f1", marginTop:12, display:"inline-block", fontWeight:600 }}>갤러리에서 작품 둘러보기 →</Link>
+            <Link href="/gallery" style={{ color:"#6366f1", marginTop:12, display:"inline-block", fontWeight:600 }}>
+              갤러리에서 작품 둘러보기 →
+            </Link>
           </div>
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
@@ -99,7 +105,7 @@ export default function CompanyDashboard() {
               <div key={item.id} style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:14, padding:20 }}>
                 <div style={{ display:"flex", gap:16, alignItems:"flex-start" }}>
                   {/* 썸네일 */}
-                  <Link href={item.workId ? `/work/${item.workId}` : `/portfolio/${item.authorUid}`} style={{ flexShrink:0 }}>
+                  <Link href={getLink(item)} style={{ flexShrink:0 }}>
                     <div style={{ width:80, height:80, borderRadius:10, overflow:"hidden", background:"#1a1a24" }}>
                       {item.workImage
                         ? <img src={item.workImage} alt={item.workTitle} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
@@ -111,13 +117,16 @@ export default function CompanyDashboard() {
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8, marginBottom:6 }}>
                       <div>
-                       <Link href={item.workId ? `/work/${item.workId}` : `/portfolio/${item.authorUid}`} style={{ fontWeight:700, fontSize:16, color:"#f0f0ff", textDecoration:"none" }}>
-
+                        <Link href={getLink(item)} style={{ fontWeight:700, fontSize:16, color:"#f0f0ff", textDecoration:"none" }}>
+                          {item.workTitle}
+                        </Link>
                         <div style={{ color:"#818cf8", fontSize:13, marginTop:2 }}>👤 {item.authorName}</div>
                       </div>
                       <div style={{ color:"#55556e", fontSize:12, textAlign:"right" }}>
                         <div>📅 등록: {fmt(item.savedAt)}</div>
-                        {item.updatedAt?.seconds !== item.savedAt?.seconds && <div>✏️ 수정: {fmt(item.updatedAt)}</div>}
+                        {item.updatedAt?.seconds !== item.savedAt?.seconds && (
+                          <div>✏️ 수정: {fmt(item.updatedAt)}</div>
+                        )}
                       </div>
                     </div>
 
@@ -127,9 +136,9 @@ export default function CompanyDashboard() {
                         <textarea value={editMemo} onChange={(e) => setEditMemo(e.target.value)} rows={3}
                           style={{ width:"100%", background:"#1a1a24", border:"1px solid #6366f1", borderRadius:8, color:"#f0f0ff", padding:"10px 14px", fontSize:14, resize:"vertical", boxSizing:"border-box", marginBottom:8 }} />
                         <div style={{ display:"flex", gap:8 }}>
-                          <button onClick={() => saveMemo(item.id)} disabled={savingId===item.id}
+                          <button onClick={() => saveMemo(item.id)} disabled={savingId === item.id}
                             style={{ background:"#6366f1", color:"#fff", border:"none", borderRadius:8, padding:"8px 20px", fontWeight:600, cursor:"pointer" }}>
-                            {savingId===item.id ? "저장 중..." : "저장"}
+                            {savingId === item.id ? "저장 중..." : "저장"}
                           </button>
                           <button onClick={() => setEditingId(null)}
                             style={{ background:"#1a1a24", color:"#9999bb", border:"1px solid #2e2e3f", borderRadius:8, padding:"8px 20px", fontWeight:600, cursor:"pointer" }}>
