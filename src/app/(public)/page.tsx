@@ -57,7 +57,7 @@ export default function HomePage() {
     if (cached) { try { applySettings(JSON.parse(cached)); } catch {} setIsLoaded(true); }
     (async () => {
       try {
-        const wq = query(collection(db,"works"), where("isPublic","==",true), orderBy("createdAt","desc"), limit(12));
+        const wq = query(collection(db,"works"), where("isPublic","==",true), orderBy("createdAt","desc"), limit(24));
         const [wSnap,hSnap,sSnap,nSnap] = await Promise.all([
           getDocs(wq), getDocs(collection(db,"heroImages")),
           getDoc(doc(db,"settings","main")),
@@ -203,7 +203,7 @@ export default function HomePage() {
         {filtered.length===0
           ? <div style={{ textAlign:"center",padding:"80px 0" }}><div style={{ fontSize:48,marginBottom:16 }}>🎨</div><p style={{ color:"#9999bb" }}>첫 번째 작품을 등록해 보세요!</p></div>
           : <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:16 }}>
-              {filtered.slice(0,8).map((w) => (
+              {filtered.slice(0,12).map((w) => (
                 <Link key={w.id} href={`/work/${w.id}`} style={{ textDecoration:"none" }}>
                   <div style={{ background:"#111118",border:`1px solid ${bc}`,borderRadius:br,overflow:"hidden",cursor:"pointer",transition:"all 0.3s" }}
                     onMouseEnter={(e) => {(e.currentTarget as HTMLElement).style.transform="translateY(-4px)";(e.currentTarget as HTMLElement).style.boxShadow="0 8px 40px rgba(99,102,241,0.2)";}}
