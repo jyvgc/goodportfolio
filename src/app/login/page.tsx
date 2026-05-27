@@ -7,6 +7,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { getDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const schema = z.object({
   email: z.string().email("올바른 이메일을 입력하세요"),
@@ -14,9 +18,15 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
+const getDashboardPath = (role: string) => {
+  if (role === "admin")   return "/admin";
+  if (role === "company") return "/dashboard/company";
+  return "/dashboard/student";
+};
+
 export default function LoginPage() {
   const router = useRouter();
-  const { loginWithEmail, loginWithGoogle } = useAuth();
+  const { loginWithGoogle } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -26,9 +36,12 @@ export default function LoginPage() {
   const onSubmit = async (data: FormData) => {
     try {
       setLoading(true);
-      await loginWithEmail(data.email, data.password);
+      const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
+      // Firebase에서 역할 확인 후 이동
+      const snap = await getDoc(doc(db, "users", cred.user.uid));
+      const role = snap.exists() ? snap.data().role : "student";
       toast.success("로그인 성공!");
-      router.push("/dashboard/student");
+      router.push(getDashboardPath(role));
     } catch {
       toast.error("이메일 또는 비밀번호가 올바르지 않습니다.");
     } finally {
@@ -39,9 +52,11 @@ export default function LoginPage() {
   const handleGoogle = async () => {
     try {
       setLoading(true);
-      await loginWithGoogle("student");
+      const cred = await loginWithGoogle("student");
+      const snap = await getDoc(doc(db, "users", cred.user.uid));
+      const role = snap.exists() ? snap.data().role : "student";
       toast.success("로그인 성공!");
-      router.push("/dashboard/student");
+      router.push(getDashboardPath(role));
     } catch {
       toast.error("Google 로그인에 실패했습니다.");
     } finally {
@@ -51,12 +66,10 @@ export default function LoginPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex" }}>
-      {/* 왼쪽 — 비주얼 */}
       <div style={{
         flex: 1, display: "none", background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
         position: "relative", overflow: "hidden", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 60,
       }} className="login-visual">
-        {/* 글로우 */}
         <div style={{ position: "absolute", top: "30%", left: "50%", transform: "translate(-50%,-50%)", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)" }} />
         <div style={{ position: "relative", textAlign: "center" }}>
           <div style={{ fontSize: 64, marginBottom: 24 }}>🎨</div>
@@ -64,9 +77,7 @@ export default function LoginPage() {
             당신의 작품을<br />
             <span style={{ background: "linear-gradient(135deg, #6366f1, #22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>세상에 선보이세요</span>
           </h2>
-          <p style={{ color: "#9999bb", fontSize: 15, lineHeight: 1.7 }}>
-            웹툰·게임콘텐츠 학생들의<br />포트폴리오 & 채용 연계 플랫폼
-          </p>
+          <p style={{ color: "#9999bb", fontSize: 15, lineHeight: 1.7 }}>웹툰·게임콘텐츠 학생들의<br />포트폴리오 & 채용 연계 플랫폼</p>
           <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 40 }}>
             {["학생 120+", "작품 850+", "기업 30+"].map((s) => (
               <div key={s} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "12px 20px", color: "#9999bb", fontSize: 13 }}>{s}</div>
@@ -75,10 +86,8 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* 오른쪽 — 폼 */}
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 20px", minHeight: "100vh" }}>
         <div style={{ width: "100%", maxWidth: 420 }}>
-          {/* 로고 */}
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", marginBottom: 40, justifyContent: "center" }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, #6366f1, #22d3ee)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ color: "white", fontWeight: 900, fontSize: 18 }}>G</span>
@@ -91,12 +100,11 @@ export default function LoginPage() {
           <h1 style={{ fontSize: 26, fontWeight: 800, color: "#f0f0ff", marginBottom: 6, textAlign: "center" }}>로그인</h1>
           <p style={{ color: "#55556e", fontSize: 14, marginBottom: 32, textAlign: "center" }}>계정에 로그인하세요</p>
 
-          {/* Google 로그인 */}
           <button onClick={handleGoogle} disabled={loading} style={{
             width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
             background: "#111118", border: "1px solid #2e2e3f", borderRadius: 10,
             padding: "13px 20px", fontSize: 14, fontWeight: 600, color: "#f0f0ff",
-            cursor: "pointer", marginBottom: 20, transition: "all 0.2s",
+            cursor: "pointer", marginBottom: 20,
           }}>
             <svg width="18" height="18" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -107,18 +115,16 @@ export default function LoginPage() {
             Google로 계속하기
           </button>
 
-          {/* 구분선 */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
             <div style={{ flex: 1, height: 1, background: "#1a1a24" }} />
             <span style={{ color: "#2e2e3f", fontSize: 12 }}>또는 이메일로</span>
             <div style={{ flex: 1, height: 1, background: "#1a1a24" }} />
           </div>
 
-          {/* 이메일 폼 */}
           <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label style={{ display: "block", fontSize: 13, color: "#9999bb", marginBottom: 6, fontWeight: 500 }}>이메일</label>
-              <input {...register("email")} type="email" placeholder="student@gumi.ac.kr" style={{
+              <input {...register("email")} type="email" style={{
                 width: "100%", background: "#111118", border: "1px solid #2e2e3f",
                 color: "#f0f0ff", padding: "12px 16px", borderRadius: 10, fontSize: 14, outline: "none",
               }} />
@@ -126,7 +132,7 @@ export default function LoginPage() {
             </div>
             <div>
               <label style={{ display: "block", fontSize: 13, color: "#9999bb", marginBottom: 6, fontWeight: 500 }}>비밀번호</label>
-              <input {...register("password")} type="password" placeholder="비밀번호 입력" style={{
+              <input {...register("password")} type="password" style={{
                 width: "100%", background: "#111118", border: "1px solid #2e2e3f",
                 color: "#f0f0ff", padding: "12px 16px", borderRadius: 10, fontSize: 14, outline: "none",
               }} />
@@ -150,9 +156,7 @@ export default function LoginPage() {
       </div>
 
       <style>{`
-        @media (min-width: 900px) {
-          .login-visual { display: flex !important; }
-        }
+        @media (min-width: 900px) { .login-visual { display: flex !important; } }
       `}</style>
     </div>
   );
