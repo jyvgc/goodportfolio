@@ -32,7 +32,7 @@ export default function StudentProfilePage() {
           displayName:     u.displayName ?? "",
           bio:             p.bio         ?? "",
           department:      p.department  ?? "",
-          graduationStatus: p.grade === 0 ? "졸업생" : "졸업반",
+          graduationStatus: p.grade === 0 ? "졸업예정자" : "졸업반",
           instagram:       p.snsLinks?.instagram ?? "",
           twitter:         p.snsLinks?.twitter   ?? "",
           behance:         p.snsLinks?.behance    ?? "",
