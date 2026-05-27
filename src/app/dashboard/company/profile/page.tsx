@@ -5,21 +5,19 @@ import { db } from "@/lib/firebase";
 import { useAuthStore } from "@/store/authStore";
 import Navbar from "@/components/layout/Navbar";
 
-export default function StudentProfilePage() {
+export default function CompanyProfilePage() {
   const { firebaseUser } = useAuthStore();
-  const [form, setForm] = useState({ name:"", bio:"", school:"", major:"", year:"", instagram:"", twitter:"", behance:"", github:"" });
-  const [snsEnabled, setSnsEnabled] = useState(true);
+  const [form, setForm] = useState({ companyName:"", representative:"", business:"", phone:"", website:"", address:"", description:"" });
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   useEffect(() => {
     if (!firebaseUser) return;
     (async () => {
-      const [uSnap, sSnap] = await Promise.all([getDoc(doc(db,"users",firebaseUser.uid)), getDoc(doc(db,"settings","main"))]);
-      if (uSnap.exists()) {
-        const d = uSnap.data();
-        setForm({ name:d.name??"", bio:d.bio??"", school:d.school??"", major:d.major??"", year:d.year??"", instagram:d.instagram??"", twitter:d.twitter??"", behance:d.behance??"", github:d.github??"" });
+      const snap = await getDoc(doc(db,"users",firebaseUser.uid));
+      if (snap.exists()) {
+        const d = snap.data();
+        setForm({ companyName:d.companyName??"", representative:d.representative??"", business:d.business??"", phone:d.phone??"", website:d.website??"", address:d.address??"", description:d.description??"" });
       }
-      if (sSnap.exists() && typeof sSnap.data().snsEnabled==="boolean") setSnsEnabled(sSnap.data().snsEnabled);
     })();
   }, [firebaseUser]);
   const save = async () => {
@@ -28,11 +26,11 @@ export default function StudentProfilePage() {
     await updateDoc(doc(db,"users",firebaseUser.uid), { ...form, updatedAt:new Date() });
     setSaving(false); setDone(true); setTimeout(() => setDone(false), 3000);
   };
-  const field = (label:string, key:keyof typeof form, placeholder="", textarea=false) => (
+  const inp = (label:string, key:keyof typeof form, placeholder="", textarea=false) => (
     <div style={{ marginBottom:16 }}>
       <label style={{ display:"block", color:"#9999bb", fontSize:13, marginBottom:6 }}>{label}</label>
       {textarea
-        ? <textarea value={form[key]} onChange={(e) => setForm((p) => ({...p,[key]:e.target.value}))} rows={3} placeholder={placeholder}
+        ? <textarea value={form[key]} onChange={(e) => setForm((p) => ({...p,[key]:e.target.value}))} rows={4} placeholder={placeholder}
             style={{ width:"100%", background:"#1a1a24", border:"1px solid #2e2e3f", borderRadius:8, color:"#f0f0ff", padding:"10px 14px", fontSize:14, resize:"vertical", boxSizing:"border-box" }} />
         : <input value={form[key]} onChange={(e) => setForm((p) => ({...p,[key]:e.target.value}))} placeholder={placeholder}
             style={{ width:"100%", background:"#1a1a24", border:"1px solid #2e2e3f", borderRadius:8, color:"#f0f0ff", padding:"10px 14px", fontSize:14, boxSizing:"border-box" }} />}
@@ -42,22 +40,15 @@ export default function StudentProfilePage() {
     <div style={{ minHeight:"100vh", background:"#0a0a0f", color:"#f0f0ff" }}>
       <Navbar />
       <div style={{ maxWidth:640, margin:"0 auto", padding:"100px 24px 60px" }}>
-        <h1 style={{ fontSize:24, fontWeight:900, marginBottom:32 }}>프로필 편집</h1>
+        <h1 style={{ fontSize:24, fontWeight:900, marginBottom:32 }}>회사 정보 수정</h1>
         <div style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:16, padding:32 }}>
-          {field("이름 *","name","홍길동")}
-          {field("자기소개","bio","간단한 자기소개를 입력하세요",true)}
-          {field("학교","school","구미대학교")}
-          {field("학과","major","웹툰스쿨")}
-          {field("학년","year","2")}
-          {snsEnabled && (
-            <div style={{ marginTop:24, paddingTop:24, borderTop:"1px solid #2e2e3f" }}>
-              <h3 style={{ color:"#818cf8", fontSize:14, fontWeight:600, marginBottom:16 }}>🔗 SNS 링크</h3>
-              {field("Instagram","instagram","https://instagram.com/username")}
-              {field("Twitter / X","twitter","https://twitter.com/username")}
-              {field("Behance","behance","https://behance.net/username")}
-              {field("GitHub","github","https://github.com/username")}
-            </div>
-          )}
+          {inp("회사명 *","companyName","회사명을 입력하세요")}
+          {inp("대표자명","representative","대표자명")}
+          {inp("업종","business","예: IT / 게임 / 출판 / 광고")}
+          {inp("연락처","phone","010-0000-0000")}
+          {inp("웹사이트","website","https://company.com")}
+          {inp("주소","address","회사 주소")}
+          {inp("회사 소개","description","회사를 간략하게 소개해주세요",true)}
           <button onClick={save} disabled={saving}
             style={{ width:"100%", background:saving?"#3d3d52":"#6366f1", color:"#fff", border:"none", borderRadius:8, padding:"14px 0", fontWeight:700, fontSize:16, cursor:saving?"not-allowed":"pointer", marginTop:8 }}>
             {saving?"저장 중...":done?"✅ 저장 완료!":"저장하기"}

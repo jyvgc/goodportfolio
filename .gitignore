@@ -2,3 +2,4 @@ node_modules .next .env.local .DS_Store .vs *.node*.node
 .DS_Store
 .next/
 node_modules/
+".env.local" 
