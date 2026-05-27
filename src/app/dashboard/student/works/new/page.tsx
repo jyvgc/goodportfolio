@@ -5,6 +5,7 @@ import { collection, addDoc, serverTimestamp, getDoc, doc } from "firebase/fires
 import { db } from "@/lib/firebase";
 import { useAuthStore } from "@/store/authStore";
 import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 
 const DEFAULT_CATEGORIES = ["웹툰","게임아트","캐릭터","배경","UI/UX","3D"];
 const DEFAULT_TOOLS = ["Photoshop","Illustrator","Clip Studio","Procreate","Blender","Maya","Unity","Figma"];
