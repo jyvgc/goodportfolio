@@ -37,7 +37,6 @@ const companySchema = z.object({
   phone: z.string().min(1, "전화번호를 입력하세요"),
   agreeTerms: z.boolean().refine((v) => v, "이용약관에 동의해주세요"),
   agreePrivacy: z.boolean().refine((v) => v, "개인정보처리방침에 동의해주세요"),
-  agreeMarketing: z.boolean().optional(),
 }).refine((d) => d.password === d.confirmPassword, {
   message: "비밀번호가 일치하지 않습니다",
   path: ["confirmPassword"],
@@ -72,7 +71,7 @@ export default function RegisterPage() {
 
   const companyForm = useForm<CompanyForm>({
     resolver: zodResolver(companySchema),
-    defaultValues: { industry: "", companySize: "", agreeTerms: false, agreePrivacy: false, agreeMarketing: false },
+    defaultValues: { industry: "", companySize: "", agreeTerms: false, agreePrivacy: false },
   });
 
   const onStudentSubmit = async (data: StudentForm) => {
@@ -87,6 +86,7 @@ export default function RegisterPage() {
         role: "student",
         profileImage: "",
         isApproved: true,
+        isActive: true,
       });
       const { upsertStudentProfile } = await import("@/lib/firestore");
       await upsertStudentProfile(cred.user.uid, {
@@ -133,7 +133,6 @@ export default function RegisterPage() {
         contactPerson: data.displayName,
         title: data.title,
         phone: data.phone,
-        agreeMarketing: data.agreeMarketing || false,
         savedStudents: [],
         createdAt: serverTimestamp(),
       });
@@ -155,7 +154,6 @@ export default function RegisterPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#f0f0ff", padding: "40px 20px" }}>
       <div style={{ maxWidth: 560, margin: "0 auto" }}>
-        {/* 로고 */}
         <Link href="/" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, textDecoration: "none", marginBottom: 40 }}>
           <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, #6366f1, #22d3ee)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ color: "white", fontWeight: 900, fontSize: 18 }}>G</span>
@@ -168,7 +166,6 @@ export default function RegisterPage() {
         <h1 style={{ fontSize: 26, fontWeight: 800, textAlign: "center", marginBottom: 6 }}>회원가입</h1>
         <p style={{ color: "#55556e", fontSize: 14, textAlign: "center", marginBottom: 32 }}>계정 유형을 선택해 주세요</p>
 
-        {/* 역할 선택 탭 */}
         <div style={{ display: "flex", background: "#111118", borderRadius: 12, padding: 4, marginBottom: 32, border: "1px solid #2e2e3f" }}>
           {[
             { key: "student", label: "👨‍🎨 학생", desc: "포트폴리오 등록" },
@@ -186,10 +183,9 @@ export default function RegisterPage() {
           ))}
         </div>
 
-        {/* ── 학생 폼 ── */}
+        {/* 학생 폼 */}
         {role === "student" && (
           <form onSubmit={studentForm.handleSubmit(onStudentSubmit)}>
-            {/* 학과 선택 */}
             <div style={sectionStyle}>
               <h3 style={sectionTitleStyle}>학과 선택</h3>
               <div style={{ display: "flex", gap: 10 }}>
@@ -209,7 +205,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* 졸업 상태 */}
             <div style={sectionStyle}>
               <h3 style={sectionTitleStyle}>졸업 상태</h3>
               <div style={{ display: "flex", gap: 10 }}>
@@ -229,7 +224,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* 개인 정보 */}
             <div style={sectionStyle}>
               <h3 style={sectionTitleStyle}>개인 정보</h3>
               <div style={{ marginBottom: 16 }}>
@@ -254,7 +248,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* 동의 */}
             <div style={{ ...sectionStyle, marginBottom: 24 }}>
               <h3 style={sectionTitleStyle}>약관 동의</h3>
               {[
@@ -282,14 +275,13 @@ export default function RegisterPage() {
           </form>
         )}
 
-        {/* ── 기업 폼 ── */}
+        {/* 기업 폼 */}
         {role === "company" && (
           <form onSubmit={companyForm.handleSubmit(onCompanySubmit)}>
             <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: "12px 16px", marginBottom: 20, fontSize: 13, color: "#f59e0b" }}>
               ℹ️ 기업 계정은 관리자 승인 후 활성화됩니다. (영업일 1~2일 소요)
             </div>
 
-            {/* 회사 정보 */}
             <div style={sectionStyle}>
               <h3 style={sectionTitleStyle}>회사 정보</h3>
               <div style={{ marginBottom: 16 }}>
@@ -322,7 +314,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* 담당자 정보 */}
             <div style={sectionStyle}>
               <h3 style={sectionTitleStyle}>담당자 정보</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
@@ -359,20 +350,17 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* 동의 */}
+            {/* 마케팅 동의 삭제 - 필수 항목만 */}
             <div style={{ ...sectionStyle, marginBottom: 24 }}>
               <h3 style={sectionTitleStyle}>약관 동의</h3>
               {[
-                { name: "agreeTerms" as const, label: "[필수] 이용약관 동의", required: true, onClick: () => setShowTerms(true) },
-                { name: "agreePrivacy" as const, label: "[필수] 개인정보처리방침 동의", required: true, onClick: () => setShowPrivacy(true) },
-                { name: "agreeMarketing" as const, label: "[선택] 마케팅 정보 수신 동의", required: false, onClick: undefined },
+                { name: "agreeTerms" as const, label: "[필수] 이용약관 동의", onClick: () => setShowTerms(true) },
+                { name: "agreePrivacy" as const, label: "[필수] 개인정보처리방침 동의", onClick: () => setShowPrivacy(true) },
               ].map((item) => (
                 <label key={item.name} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 12 }}>
                   <input {...companyForm.register(item.name)} type="checkbox" style={{ width: 18, height: 18, accentColor: "#6366f1" }} />
-                  <span style={{ fontSize: 14, color: item.required ? "#9999bb" : "#55556e" }}>{item.label}</span>
-                  {item.onClick && (
-                    <button type="button" onClick={item.onClick} style={{ marginLeft: "auto", background: "none", border: "none", color: "#6366f1", fontSize: 12, cursor: "pointer" }}>보기</button>
-                  )}
+                  <span style={{ fontSize: 14, color: "#9999bb" }}>{item.label}</span>
+                  <button type="button" onClick={item.onClick} style={{ marginLeft: "auto", background: "none", border: "none", color: "#6366f1", fontSize: 12, cursor: "pointer" }}>보기</button>
                 </label>
               ))}
               {companyForm.formState.errors.agreeTerms && <p style={errorStyle}>{companyForm.formState.errors.agreeTerms.message}</p>}
@@ -396,38 +384,30 @@ export default function RegisterPage() {
         </p>
       </div>
 
-      {/* 이용약관 모달 */}
       {showTerms && (
         <div onClick={() => setShowTerms(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, maxWidth: 560, width: "100%", maxHeight: "80vh", overflow: "auto", padding: 32 }}>
             <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>이용약관</h2>
             <div style={{ color: "#9999bb", fontSize: 13, lineHeight: 1.8 }}>
               <p><strong style={{ color: "#f0f0ff" }}>제1조 (목적)</strong><br />이 약관은 GoodPortfolio 서비스의 이용 조건 및 절차, 이용자와 서비스 제공자의 권리·의무를 규정합니다.</p>
-              <br />
-              <p><strong style={{ color: "#f0f0ff" }}>제2조 (서비스 이용)</strong><br />서비스는 웹툰·게임콘텐츠 학생들의 포트폴리오 전시 및 채용 연계를 위한 플랫폼입니다.</p>
-              <br />
-              <p><strong style={{ color: "#f0f0ff" }}>제3조 (금지 행위)</strong><br />타인의 정보 도용, 음란/폭력적 콘텐츠 업로드, 서비스 방해 행위 등은 금지됩니다.</p>
-              <br />
-              <p><strong style={{ color: "#f0f0ff" }}>제4조 (서비스 중단)</strong><br />시스템 점검, 보수, 운영상 필요에 의해 서비스가 일시 중단될 수 있습니다.</p>
+              <br /><p><strong style={{ color: "#f0f0ff" }}>제2조 (서비스 이용)</strong><br />서비스는 웹툰·게임콘텐츠 학생들의 포트폴리오 전시 및 채용 연계를 위한 플랫폼입니다.</p>
+              <br /><p><strong style={{ color: "#f0f0ff" }}>제3조 (금지 행위)</strong><br />타인의 정보 도용, 음란/폭력적 콘텐츠 업로드, 서비스 방해 행위 등은 금지됩니다.</p>
+              <br /><p><strong style={{ color: "#f0f0ff" }}>제4조 (서비스 중단)</strong><br />시스템 점검, 보수, 운영상 필요에 의해 서비스가 일시 중단될 수 있습니다.</p>
             </div>
             <button onClick={() => setShowTerms(false)} style={{ marginTop: 20, width: "100%", background: "#6366f1", color: "white", padding: "12px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600 }}>확인</button>
           </div>
         </div>
       )}
 
-      {/* 개인정보처리방침 모달 */}
       {showPrivacy && (
         <div onClick={() => setShowPrivacy(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: "#111118", border: "1px solid #2e2e3f", borderRadius: 16, maxWidth: 560, width: "100%", maxHeight: "80vh", overflow: "auto", padding: 32 }}>
             <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>개인정보처리방침</h2>
             <div style={{ color: "#9999bb", fontSize: 13, lineHeight: 1.8 }}>
               <p><strong style={{ color: "#f0f0ff" }}>수집하는 개인정보</strong><br />이름, 이메일, 학과(학생), 회사명/전화번호(기업), 포트폴리오 작품 등</p>
-              <br />
-              <p><strong style={{ color: "#f0f0ff" }}>수집 목적</strong><br />서비스 제공, 포트폴리오 전시, 채용 연계, 서비스 개선</p>
-              <br />
-              <p><strong style={{ color: "#f0f0ff" }}>보유 기간</strong><br />회원 탈퇴 시까지 (관계 법령에 따라 일정 기간 보관)</p>
-              <br />
-              <p><strong style={{ color: "#f0f0ff" }}>제3자 제공</strong><br />이용자 동의 없이 개인정보를 제3자에게 제공하지 않습니다. 단, 채용 제안 수락 시 해당 기업에 연락처가 공개됩니다.</p>
+              <br /><p><strong style={{ color: "#f0f0ff" }}>수집 목적</strong><br />서비스 제공, 포트폴리오 전시, 채용 연계, 서비스 개선</p>
+              <br /><p><strong style={{ color: "#f0f0ff" }}>보유 기간</strong><br />회원 탈퇴 시까지 (관계 법령에 따라 일정 기간 보관)</p>
+              <br /><p><strong style={{ color: "#f0f0ff" }}>제3자 제공</strong><br />이용자 동의 없이 개인정보를 제3자에게 제공하지 않습니다.</p>
             </div>
             <button onClick={() => setShowPrivacy(false)} style={{ marginTop: 20, width: "100%", background: "#6366f1", color: "white", padding: "12px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600 }}>확인</button>
           </div>
