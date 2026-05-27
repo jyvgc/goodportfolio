@@ -8,7 +8,7 @@ import Link from "next/link";
 
 interface Student {
   id: string; displayName: string; email: string;
-  department: string; isActive: boolean; isApproved: boolean;
+  department: string; isActive: boolean;
   createdAt: any; profileImage: string; workCount?: number;
 }
 
@@ -104,18 +104,17 @@ export default function AdminStudentsPage() {
               {paginated.map((s) => (
                 <div key={s.id} style={{ background:"#111118", border:`1px solid ${selected?.id===s.id?"#6366f1":"#2e2e3f"}`, borderRadius:10, padding:"14px 20px", display:"flex", alignItems:"center", gap:16, flexWrap:"wrap", cursor:"pointer" }}
                   onClick={() => openDetail(s)}>
-                  {/* 아바타 */}
                   <div style={{ width:44, height:44, borderRadius:10, overflow:"hidden", flexShrink:0, background:"linear-gradient(135deg,#6366f1,#22d3ee)" }}>
-                    {s.profileImage ? <img src={s.profileImage} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:18, color:"white" }}>{s.displayName?.charAt(0)||"?"}</div>}
+                    {s.profileImage
+                      ? <img src={s.profileImage} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                      : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:18, color:"white" }}>{s.displayName?.charAt(0)||"?"}</div>}
                   </div>
-                  {/* 정보 */}
                   <div style={{ flex:1, minWidth:140 }}>
                     <div style={{ fontWeight:700, fontSize:15 }}>{s.displayName || "(이름 없음)"}</div>
                     <div style={{ color:"#9999bb", fontSize:13 }}>{s.email}</div>
-                    <div style={{ color:"#55556e", fontSize:12, marginTop:2 }}>{s.department || "-"} · 작품 {s.workCount}개 · 가입 {fmt(s.createdAt)}</div>
+                    <div style={{ color:"#55556e", fontSize:12, marginTop:2 }}>{s.department||"-"} · 작품 {s.workCount}개 · 가입 {fmt(s.createdAt)}</div>
                   </div>
-                  {/* 상태 */}
-                  <div style={{ display:"flex", gap:8, alignItems:"center" }} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ display:"flex", gap:8 }} onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => toggleActive(s.id, s.isActive)}
                       style={{ padding:"6px 16px", borderRadius:999, fontWeight:700, fontSize:12, border:"none", cursor:"pointer",
                         background:s.isActive?"rgba(16,185,129,0.15)":"rgba(239,68,68,0.15)",
@@ -132,7 +131,6 @@ export default function AdminStudentsPage() {
               {paginated.length === 0 && <p style={{ color:"#55556e", textAlign:"center", padding:40 }}>학생이 없습니다.</p>}
             </div>
 
-            {/* 페이지네이션 */}
             {totalPages > 1 && (
               <div style={{ display:"flex", justifyContent:"center", gap:8 }}>
                 <button onClick={() => setPage((p) => Math.max(1, p-1))} disabled={page===1}
@@ -151,15 +149,15 @@ export default function AdminStudentsPage() {
         )}
       </div>
 
-      {/* 상세 모달 */}
       {selected && (
         <div onClick={() => setSelected(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:16, maxWidth:640, width:"100%", maxHeight:"85vh", overflow:"auto", padding:32 }}>
-            {/* 헤더 */}
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:24 }}>
               <div style={{ display:"flex", gap:16, alignItems:"center" }}>
                 <div style={{ width:64, height:64, borderRadius:14, overflow:"hidden", background:"linear-gradient(135deg,#6366f1,#22d3ee)", flexShrink:0 }}>
-                  {selected.profileImage ? <img src={selected.profileImage} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:24, color:"white" }}>{selected.displayName?.charAt(0)||"?"}</div>}
+                  {selected.profileImage
+                    ? <img src={selected.profileImage} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                    : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:24, color:"white" }}>{selected.displayName?.charAt(0)||"?"}</div>}
                 </div>
                 <div>
                   <h2 style={{ fontSize:20, fontWeight:900, marginBottom:4 }}>{selected.displayName}</h2>
@@ -170,7 +168,6 @@ export default function AdminStudentsPage() {
               <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:"#55556e", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
 
-            {/* 상세 정보 */}
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:24 }}>
               {[
                 { label:"학과", value:selected.department||"-" },
@@ -185,7 +182,6 @@ export default function AdminStudentsPage() {
               ))}
             </div>
 
-            {/* 액션 버튼 */}
             <div style={{ display:"flex", gap:8, marginBottom:24 }}>
               <button onClick={() => toggleActive(selected.id, selected.isActive)}
                 style={{ flex:1, padding:"10px 0", borderRadius:8, fontWeight:700, fontSize:14, border:"none", cursor:"pointer",
@@ -194,8 +190,7 @@ export default function AdminStudentsPage() {
                 {selected.isActive?"❌ 비활성화":"✅ 활성화"}
               </button>
               <Link href={`/portfolio/${selected.id}`} target="_blank"
-                style={{ flex:1, padding:"10px 0", borderRadius:8, fontWeight:700, fontSize:14, textDecoration:"none", textAlign:"center",
-                  background:"rgba(99,102,241,0.15)", color:"#818cf8" }}>
+                style={{ flex:1, padding:"10px 0", borderRadius:8, fontWeight:700, fontSize:14, textDecoration:"none", textAlign:"center", background:"rgba(99,102,241,0.15)", color:"#818cf8" }}>
                 🎨 포트폴리오 보기
               </Link>
               <button onClick={() => deleteStudent(selected.id)}
@@ -204,7 +199,6 @@ export default function AdminStudentsPage() {
               </button>
             </div>
 
-            {/* 작품 목록 */}
             <div>
               <h3 style={{ fontSize:15, fontWeight:700, color:"#818cf8", marginBottom:16 }}>등록 작품 ({selectedWorks.length})</h3>
               {worksLoading ? <p style={{ color:"#55556e" }}>⏳ 불러오는 중...</p>
