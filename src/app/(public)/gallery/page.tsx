@@ -1,128 +1,106 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { collection, query, where, getDocs, getDoc, doc, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { collection, query, where, orderBy, limit, getDocs, getDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
-const CATEGORIES = ["전체", "웹툰", "게임아트", "캐릭터", "배경", "UI/UX", "3D"];
-
-interface Work {
-  id: string; title: string; category: string;
-  images: string[]; authorUid: string; tools: string[]; viewCount: number;
-}
+interface Work { id:string; title:string; category:string|string[]; images:string[]; authorName:string; viewCount:number; }
 
 export default function GalleryPage() {
   const [works, setWorks] = useState<Work[]>([]);
+  const [categories, setCategories] = useState<string[]>(["ALL"]);
+  const [selected, setSelected] = useState("ALL");
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState("전체");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [maxWidth, setMaxWidth] = useState("1280");
-  const [borderColor, setBorderColor] = useState("#2e2e3f");
-  const [borderRadius, setBorderRadius] = useState<"rounded" | "square">("rounded");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const fetchAll = async () => {
+    (async () => {
       try {
-        const q = query(collection(db, "works"), where("isPublic", "==", true), orderBy("createdAt", "desc"), limit(50));
-        const snap = await getDocs(q);
-        setWorks(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Work)));
-        const settings = await getDoc(doc(db, "settings", "main"));
-        if (settings.exists()) {
-          const d = settings.data();
-          if (d.maxWidth) setMaxWidth(d.maxWidth);
-          if (d.borderColor) setBorderColor(d.borderColor);
-          if (d.borderRadius) setBorderRadius(d.borderRadius);
+        const [wSnap, sSnap] = await Promise.all([
+          getDocs(query(collection(db,"works"), where("isPublic","==",true))),
+          getDoc(doc(db,"settings","main")),
+        ]);
+        const list = wSnap.docs
+          .map((d) => ({ id:d.id, ...d.data() } as Work))
+          .sort((a:any,b:any) => (b.createdAt?.seconds??0)-(a.createdAt?.seconds??0));
+        setWorks(list);
+        // ① 관리자 설정 카테고리 불러오기
+        if (sSnap.exists() && sSnap.data().categories?.length) {
+          setCategories(["ALL", ...sSnap.data().categories]);
+        } else {
+          setCategories(["ALL","웹툰","게임아트","캐릭터","배경","UI/UX","3D"]);
         }
-      } catch (e) { console.error(e); }
+      } catch(e) { console.error(e); }
       finally { setLoading(false); }
-    };
-    fetchAll();
+    })();
   }, []);
 
   const filtered = works.filter((w) => {
-    const matchCategory = selectedCategory === "전체" || w.category === selectedCategory;
-    const matchSearch = searchQuery === "" ||
-      w.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      w.tools?.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchCategory && matchSearch;
+    const matchCat = selected==="ALL" || (Array.isArray(w.category) ? w.category.includes(selected) : w.category===selected);
+    const matchSearch = !search.trim() || w.title?.toLowerCase().includes(search.toLowerCase()) || w.authorName?.toLowerCase().includes(search.toLowerCase());
+    return matchCat && matchSearch;
   });
 
-  const mw = maxWidth === "100%" ? "100%" : `${maxWidth}px`;
-  const br = borderRadius === "rounded" ? 14 : 0;
-  const bc = borderColor === "transparent" ? "transparent" : borderColor;
+  const cat = (c:string|string[]) => Array.isArray(c) ? c[0] : c;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#f0f0ff" }}>
+    <div style={{ minHeight:"100vh", background:"#0a0a0f", color:"#f0f0ff" }}>
       <Navbar />
-
-      <div style={{ paddingTop: 80, paddingBottom: 40, borderBottom: "1px solid #2e2e3f", background: "#111118" }}>
-        <div style={{ maxWidth: mw, margin: "0 auto", padding: "0 24px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 32, height: 1, background: "#6366f1" }} />
-            <span style={{ color: "#818cf8", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase" }}>Portfolio Gallery</span>
-          </div>
-          <h1 style={{ fontSize: 36, fontWeight: 900, marginBottom: 24 }}>
-            <span style={{ background: "linear-gradient(135deg, #6366f1, #22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>갤러리</span>
-          </h1>
-          <div style={{ position: "relative", maxWidth: 480 }}>
-            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#55556e", fontSize: 16 }}>🔍</span>
-            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="작품명, 기술 스택으로 검색..."
-              style={{ width: "100%", background: "#1a1a24", border: "1px solid #2e2e3f", color: "#f0f0ff", padding: "12px 14px 12px 42px", borderRadius: 10, fontSize: 14, outline: "none" }} />
-          </div>
+      <div style={{ maxWidth:1280, margin:"0 auto", padding:"100px 24px 60px" }}>
+        <div style={{ marginBottom:40 }}>
+          <h1 style={{ fontSize:36, fontWeight:900, marginBottom:8 }}>갤러리</h1>
+          <p style={{ color:"#9999bb", fontSize:16 }}>학생들의 포트폴리오 작품을 감상하세요</p>
         </div>
-      </div>
 
-      <div style={{ maxWidth: mw, margin: "0 auto", padding: "32px 24px" }}>
-        {/* 카테고리 탭 */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 24, overflowX: "auto", paddingBottom: 8 }}>
-          {CATEGORIES.map((c) => (
-            <button key={c} onClick={() => setSelectedCategory(c)} style={{
-              flexShrink: 0, padding: "8px 20px", borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: "pointer",
-              border: selectedCategory === c ? "none" : `1px solid ${bc}`,
-              background: selectedCategory === c ? "#6366f1" : "#111118",
-              color: selectedCategory === c ? "white" : "#9999bb",
-            }}>{c}</button>
+        {/* 검색 */}
+        <div style={{ position:"relative", maxWidth:440, marginBottom:24 }}>
+          <span style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", color:"#55556e" }}>🔍</span>
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="작품명 또는 학생 이름 검색"
+            style={{ width:"100%", background:"#111118", border:"1px solid #2e2e3f", borderRadius:10, color:"#f0f0ff", padding:"11px 14px 11px 42px", fontSize:14, boxSizing:"border-box" }} />
+          {search && <button onClick={() => setSearch("")} style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#55556e", cursor:"pointer", fontSize:16 }}>✕</button>}
+        </div>
+
+        {/* 카테고리 필터 */}
+        <div style={{ display:"flex", gap:8, marginBottom:40, overflowX:"auto", paddingBottom:8 }}>
+          {categories.map((c) => (
+            <button key={c} onClick={() => setSelected(c)}
+              style={{ flexShrink:0, padding:"8px 20px", borderRadius:999, fontSize:13, fontWeight:600, cursor:"pointer",
+                border: selected===c ? "none" : "1px solid #2e2e3f",
+                background: selected===c ? "#6366f1" : "#111118",
+                color: selected===c ? "white" : "#9999bb" }}>
+              {c}
+            </button>
           ))}
         </div>
 
-        <div style={{ color: "#55556e", fontSize: 13, marginBottom: 20 }}>
-          {loading ? "불러오는 중..." : `작품 ${filtered.length}개`}
-        </div>
-
         {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
-            {Array.from({ length: 9 }).map((_, i) => (
-              <div key={i} style={{ aspectRatio: "1", borderRadius: br, background: "#111118" }} />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "80px 0" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🎨</div>
-            <p style={{ color: "#9999bb" }}>{searchQuery ? `"${searchQuery}" 검색 결과가 없습니다.` : "아직 등록된 작품이 없습니다."}</p>
+          <div style={{ textAlign:"center", padding:"80px 0", color:"#55556e" }}>⏳ 불러오는 중...</div>
+        ) : filtered.length===0 ? (
+          <div style={{ textAlign:"center", padding:"80px 0" }}>
+            <div style={{ fontSize:48, marginBottom:12 }}>🎨</div>
+            <p style={{ color:"#9999bb" }}>작품이 없습니다.</p>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:16 }}>
             {filtered.map((w) => (
-              <Link key={w.id} href={`/work/${w.id}`} style={{ textDecoration: "none" }}>
-                <div style={{ background: "#111118", border: `1px solid ${bc}`, borderRadius: br, overflow: "hidden", cursor: "pointer", transition: "all 0.3s" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(99,102,241,0.5)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 40px rgba(99,102,241,0.2)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = bc; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}>
-                  <div style={{ aspectRatio: "1", background: "#1a1a24", overflow: "hidden", position: "relative" }}>
+              <Link key={w.id} href={`/work/${w.id}`} style={{ textDecoration:"none" }}>
+                <div style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:12, overflow:"hidden", transition:"all 0.2s" }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform="translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow="0 8px 40px rgba(99,102,241,0.2)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform="translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow="none"; }}>
+                  <div style={{ aspectRatio:"1", background:"#1a1a24", overflow:"hidden" }}>
                     {w.images?.[0]
-                      ? <img src={w.images[0]} alt={w.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>🎨</div>
-                    }
-                    <div style={{ position: "absolute", top: 10, left: 10, padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: "rgba(99,102,241,0.8)", color: "white" }}>{w.category}</div>
+                      ? <img src={w.images[0]} alt={w.title} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                      : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:40 }}>🎨</div>}
                   </div>
-                  <div style={{ padding: 14 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#f0f0ff", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.title}</div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {w.tools?.slice(0, 3).map((t) => <span key={t} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "#1a1a24", color: "#9999bb", border: "1px solid #2e2e3f" }}>{t}</span>)}
+                  <div style={{ padding:14 }}>
+                    <div style={{ fontWeight:700, fontSize:14, color:"#f0f0ff", marginBottom:4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{w.title}</div>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <span style={{ fontSize:11, padding:"2px 8px", borderRadius:999, background:"rgba(99,102,241,0.15)", color:"#818cf8", border:"1px solid rgba(99,102,241,0.3)" }}>{cat(w.category)}</span>
+                      <span style={{ fontSize:11, color:"#55556e" }}>👁 {w.viewCount??0}</span>
                     </div>
-                    <div style={{ color: "#55556e", fontSize: 11, marginTop: 8 }}>👁 {w.viewCount || 0}</div>
+                    {w.authorName && <div style={{ color:"#55556e", fontSize:12, marginTop:4 }}>👤 {w.authorName}</div>}
                   </div>
                 </div>
               </Link>
