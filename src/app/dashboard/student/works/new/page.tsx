@@ -5,7 +5,7 @@ import { collection, addDoc, serverTimestamp, getDoc, doc } from "firebase/fires
 import { db } from "@/lib/firebase";
 import { useAuthStore } from "@/store/authStore";
 import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import Footer from "@/components/layout/Footer"; 
 
 const DEFAULT_CATEGORIES = ["웹툰","게임아트","캐릭터","배경","UI/UX","3D"];
 const DEFAULT_TOOLS = ["Photoshop","Illustrator","Clip Studio","Procreate","Blender","Maya","Unity","Figma"];
@@ -15,9 +15,9 @@ const MAX_DIM = 1600;
 async function uploadToCloudinary(file: File): Promise<string> {
   const data = new FormData();
   data.append("file", file);
-  data.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+  data.append("upload_preset", "goodportfolio_unsigned"); // ← 직접 입력
   const res = await fetch(
-    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+    `https://api.cloudinary.com/v1_1/djnztlzaq/image/upload`, // ← 직접 입력
     { method: "POST", body: data }
   );
   const json = await res.json();
