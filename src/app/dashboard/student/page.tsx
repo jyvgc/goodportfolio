@@ -17,23 +17,23 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     if (!firebaseUser) return;
-        (async () => {
+
+    // ✅ 역할 체크를 맨 위에서 먼저 처리
+    if (userDoc?.role === "admin") { router.replace("/admin"); return; }
+    if (userDoc?.role === "company") { router.replace("/dashboard/company"); return; }
+
+    (async () => {
       try {
-        // orderBy 제거 → Firestore 복합 인덱스 오류 방지, 클라이언트에서 정렬
         const q = query(collection(db,"works"), where("authorUid","==",firebaseUser.uid));
         const snap = await getDocs(q);
         const list = snap.docs
           .map((d) => ({ id:d.id, ...d.data() } as Work))
-          .sort((a,b) => (b.createdAt?.seconds??0) - (a.createdAt?.seconds??0)); // 최신순
+          .sort((a,b) => (b.createdAt?.seconds??0) - (a.createdAt?.seconds??0));
         setWorks(list);
       } catch(e) { console.error("works fetch error:", e); }
       finally { setLoading(false); }
     })();
- // 관리자/기업이 잘못 접근하면 올바른 페이지로 리디렉션
-  if (userDoc?.role === "admin") { router.replace("/admin"); return; }
-  if (userDoc?.role === "company") { router.replace("/dashboard/company"); return; }
-  // ... 기존 코드
-}, [firebaseUser, userDoc]);
+  }, [firebaseUser, userDoc]);
 
   const cat = (c:string|string[]) => Array.isArray(c) ? c.join(", ") : c;
 
@@ -69,8 +69,7 @@ export default function StudentDashboard() {
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:16 }}>
             {works.map((w) => (
               <Link key={w.id} href={`/work/${w.id}`} style={{ textDecoration:"none" }}>
-                <div style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:12, overflow:"hidden",
-                  transition:"all 0.2s" }}
+                <div style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:12, overflow:"hidden", transition:"all 0.2s" }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform="translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow="0 8px 40px rgba(99,102,241,0.2)"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform="translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow="none"; }}>
                   <div style={{ aspectRatio:"1", background:"#1a1a24" }}>
