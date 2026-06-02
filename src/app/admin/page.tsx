@@ -11,7 +11,7 @@ import Footer from "@/components/layout/Footer";
 export default function AdminDashboard() {
   const router = useRouter();
   const { firebaseUser, userDoc, loading } = useAuthStore();
-  const [stats, setStats] = useState({ students: 0, companies: 0, works: 0, offers: 0, pendingCompanies: 0, pendingOffers: 0 });
+  const [stats, setStats] = useState({ students:0, companies:0, works:0, offers:0, pendingCompanies:0, pendingOffers:0, professors:0 });
 
   useEffect(() => {
     if (!loading && !firebaseUser) { router.push("/login"); return; }
@@ -21,31 +21,31 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const [s, c, w, o, pc] = await Promise.all([
-        getDocs(query(collection(db, "users"), where("role", "==", "student"))),
-        getDocs(query(collection(db, "users"), where("role", "==", "company"))),
-        getDocs(collection(db, "works")),
-        getDocs(collection(db, "offers")),
-        getDocs(query(collection(db, "users"), where("role", "==", "company"), where("isApproved", "==", false))),
+      const [s, c, w, o, pc, prof] = await Promise.all([
+        getDocs(query(collection(db,"users"), where("role","==","student"))),
+        getDocs(query(collection(db,"users"), where("role","==","company"))),
+        getDocs(collection(db,"works")),
+        getDocs(collection(db,"offers")),
+        getDocs(query(collection(db,"users"), where("role","==","company"), where("isApproved","==",false))),
+        getDocs(collection(db,"professorInvites")),
       ]);
       const pendingOffers = o.docs.filter(d => !d.data().adminApproved && d.data().status !== "admin_rejected").length;
-      setStats({ students: s.size, companies: c.size, works: w.size, offers: o.size, pendingCompanies: pc.size, pendingOffers });
-    } catch (e) { console.error(e); }
+      setStats({ students:s.size, companies:c.size, works:w.size, offers:o.size, pendingCompanies:pc.size, pendingOffers, professors:prof.size });
+    } catch(e) { console.error(e); }
   };
 
   if (loading) return (
-    <div style={{ minHeight:"100vh", background:"#0a0a0f", display:"flex", alignItems:"center", justifyContent:"center", color:"#818cf8" }}>
-      로딩 중...
-    </div>
+    <div style={{ minHeight:"100vh", background:"#0a0a0f", display:"flex", alignItems:"center", justifyContent:"center", color:"#818cf8" }}>로딩 중...</div>
   );
 
   const MENU = [
-    { href:"/admin/students",  icon:"👨‍🎨", label:"학생 관리",      desc:`총 ${stats.students}명`,            color:"#6366f1" },
-    { href:"/admin/companies", icon:"🏢",  label:"기업 승인",      desc:`승인 대기 ${stats.pendingCompanies}건`, color:"#f59e0b" },
-    { href:"/admin/offers",    icon:"💼",  label:"채용 제안 관리", desc:`승인 대기 ${stats.pendingOffers}건`,   color:"#10b981" },
-    { href:"/admin/works",     icon:"🎨",  label:"작품 관리",      desc:`총 ${stats.works}개`,                color:"#22d3ee" },
-    { href:"/admin/notices",   icon:"📢",  label:"공지사항",       desc:"공지 등록/관리",                      color:"#a855f7" },
-    { href:"/admin/settings",  icon:"⚙️",  label:"사이트 설정",    desc:"통계·카테고리·히어로 이미지",          color:"#f87171" },
+    { href:"/admin/students",   icon:"👨‍🎨", label:"학생 관리",      desc:`총 ${stats.students}명`,               color:"#6366f1" },
+    { href:"/admin/companies",  icon:"🏢",  label:"기업 승인",      desc:`승인 대기 ${stats.pendingCompanies}건`,  color:"#f59e0b" },
+    { href:"/admin/professors", icon:"👨‍🏫", label:"교수 관리",      desc:`등록 ${stats.professors}명`,            color:"#a855f7" },
+    { href:"/admin/offers",     icon:"💼",  label:"채용 제안 관리", desc:`승인 대기 ${stats.pendingOffers}건`,     color:"#10b981" },
+    { href:"/admin/works",      icon:"🎨",  label:"작품 관리",      desc:`총 ${stats.works}개`,                   color:"#22d3ee" },
+    { href:"/admin/notices",    icon:"📢",  label:"공지사항",       desc:"공지 등록/관리",                         color:"#a855f7" },
+    { href:"/admin/settings",   icon:"⚙️",  label:"사이트 설정",    desc:"통계·카테고리·히어로 이미지",             color:"#f87171" },
   ];
 
   return (
@@ -58,13 +58,12 @@ export default function AdminDashboard() {
         </div>
         <p style={{ color:"#9999bb", marginBottom:40 }}>플랫폼 전체 현황을 관리하세요</p>
 
-        {/* 통계 카드 */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:40 }} className="admin-stats">
           {[
-            { label:"등록 학생", value:stats.students,  icon:"👨‍🎨", color:"#6366f1" },
-            { label:"등록 기업", value:stats.companies, icon:"🏢",  color:"#22d3ee" },
-            { label:"전체 작품", value:stats.works,     icon:"🎨",  color:"#10b981" },
-            { label:"채용 제안", value:stats.offers,    icon:"💼",  color:"#f59e0b" },
+            { label:"등록 학생",  value:stats.students,   icon:"👨‍🎨", color:"#6366f1" },
+            { label:"등록 기업",  value:stats.companies,  icon:"🏢",  color:"#22d3ee" },
+            { label:"전체 작품",  value:stats.works,      icon:"🎨",  color:"#10b981" },
+            { label:"등록 교수",  value:stats.professors, icon:"👨‍🏫", color:"#a855f7" },
           ].map((c) => (
             <div key={c.label} style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:16, padding:24 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
@@ -76,7 +75,6 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* 알림 */}
         {(stats.pendingCompanies > 0 || stats.pendingOffers > 0) && (
           <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:32 }}>
             {stats.pendingCompanies > 0 && (
@@ -94,7 +92,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* 메뉴 */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }} className="admin-menu">
           {MENU.map((m) => (
             <Link key={m.href} href={m.href}
@@ -113,8 +110,8 @@ export default function AdminDashboard() {
       </div>
       <Footer />
       <style>{`
-        @media(max-width:640px){ .admin-stats{grid-template-columns:repeat(2,1fr) !important;} .admin-menu{grid-template-columns:1fr !important;} }
-        @media(max-width:900px){ .admin-menu{grid-template-columns:repeat(2,1fr) !important;} }
+        @media(max-width:640px){.admin-stats{grid-template-columns:repeat(2,1fr) !important;}.admin-menu{grid-template-columns:1fr !important;}}
+        @media(max-width:900px){.admin-menu{grid-template-columns:repeat(2,1fr) !important;}}
       `}</style>
     </div>
   );
