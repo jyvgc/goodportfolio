@@ -179,7 +179,7 @@ export default function RegisterPage() {
 
         {/* 교수 안내 */}
         <div style={{ background:"rgba(168,85,247,0.08)", border:"1px solid rgba(168,85,247,0.2)", borderRadius:10, padding:"10px 16px", marginBottom:20, fontSize:13, color:"#a855f7" }}>
-          👨‍🏫 교수 계정은 관리자가 등록한 이메일로 학생 가입 폼에서 가입하면 자동으로 교수 계정이 됩니다.
+          👨‍🏫 
         </div>
 
         <div style={{ display:"flex", background:"#111118", borderRadius:12, padding:4, marginBottom:32, border:"1px solid #2e2e3f" }}>
