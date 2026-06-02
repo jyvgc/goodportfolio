@@ -79,59 +79,50 @@ export default function RegisterPage() {
     const snap = await getDoc(doc(db, "professorInvites", docId));
     return snap.exists() ? snap.data() : null;
   };
-
-  const onStudentSubmit = async (data: StudentForm) => {
+const onStudentSubmit = async (data: StudentForm) => {
+  try {
+    setLoading(true);
+    const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
+    await updateProfile(cred.user, { displayName: data.displayName });
+    await createUserDoc(cred.user.uid, {
+      uid: cred.user.uid,
+      email: data.email,
+      displayName: data.displayName,
+      role: "student",
+      profileImage: "",
+      isApproved: true,
+    });
+    // upsertStudentProfile 실패해도 가입은 성공으로 처리
     try {
-      setLoading(true);
-      // 교수 초대 이메일인지 먼저 확인
-      const professorInvite = await checkProfessorInvite(data.email);
+      const { upsertStudentProfile } = await import("@/lib/firestore");
+      await upsertStudentProfile(cred.user.uid, {
+        uid: cred.user.uid,
+        department: data.department as any,
+        grade: data.graduationStatus === "졸업반" ? 3 : 0,
+        graduationYear: data.graduationStatus === "졸업생"
+          ? new Date().getFullYear()
+          : new Date().getFullYear() + 1,
+        bio: "", skills: [], snsLinks: {},
+        isPublic: false, viewCount: 0, badges: [],
+      });
+    } catch(e) {
+      console.error("프로필 생성 오류:", e);
+    }
+    toast.success("가입 완료! 대시보드로 이동합니다.");
+    router.push("/dashboard/student");
+  } catch (e: any) {
+    if (e.code === "auth/email-already-in-use") toast.error("이미 사용 중인 이메일입니다.");
+    else toast.error("회원가입에 실패했습니다.");
+  } finally { setLoading(false); }
+};
 
-      const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      await updateProfile(cred.user, { displayName: data.displayName });
 
-      if (professorInvite) {
-        // 교수 계정으로 가입
-        await createUserDoc(cred.user.uid, {
-          uid: cred.user.uid,
-          email: data.email,
-          displayName: data.displayName,
-          role: "professor",
-          profileImage: "",
-          isApproved: true,
-        });
-        toast.success("교수 계정으로 가입 완료!");
-        router.push("/dashboard/professor");
-      } else {
-        // 일반 학생 계정
-        await createUserDoc(cred.user.uid, {
-          uid: cred.user.uid,
-          email: data.email,
-          displayName: data.displayName,
-          role: "student",
-          profileImage: "",
-          isApproved: true,
-        });
-try {
-  const { upsertStudentProfile } = await import("@/lib/firestore");
-  await upsertStudentProfile(cred.user.uid, {
-    uid: cred.user.uid,
-    department: data.department as any,
-    grade: data.graduationStatus === "졸업예정" ? 3 : 0,
-    graduationYear: data.graduationStatus === "졸업생" ? new Date().getFullYear() : new Date().getFullYear() + 1,
-    bio: "", skills: [], snsLinks: {}, isPublic: false, viewCount: 0, badges: [],
-  });
-} catch(profileError) {
-  console.error("프로필 생성 오류 (무시):", profileError);
-}
-       
-        toast.success("가입 완료! 대시보드로 이동합니다.");
-        router.push("/dashboard/student");
-      }
-    } catch (e: any) {
-      if (e.code === "auth/email-already-in-use") toast.error("이미 사용 중인 이메일입니다.");
-      else toast.error("회원가입에 실패했습니다.");
-    } finally { setLoading(false); }
-  };
+
+
+
+
+  
+
 
   const onCompanySubmit = async (data: CompanyForm) => {
     try {
