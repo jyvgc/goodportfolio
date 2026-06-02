@@ -110,7 +110,6 @@ export default function RegisterPage() {
           role: "student",
           profileImage: "",
           isApproved: true,
-          isActive: true,
         });
 try {
   const { upsertStudentProfile } = await import("@/lib/firestore");
