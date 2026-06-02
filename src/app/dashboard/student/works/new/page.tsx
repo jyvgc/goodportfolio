@@ -180,7 +180,7 @@ export default function NewWorkPage() {
                 <div style={{ color:"#6366f1", fontWeight:600, fontSize:14 }}>클릭하여 이미지 선택</div>
                 <div style={{ color:"#55556e", fontSize:12, marginTop:8 }}>
                   ⚠ 최대 <strong style={{ color:"#9999bb" }}>1600×1600px</strong> 이내,
-                  <strong style={{ color:"#9999bb" }}> 2MB</strong> 이내 파일만 가능
+                  <strong style={{ color:"#9999bb" }}> 2MB</strong> 이내 파일만 가능, 10개 이내
                 </div>
               </label>
             </div>
