@@ -98,7 +98,7 @@ const onStudentSubmit = async (data: StudentForm) => {
       await upsertStudentProfile(cred.user.uid, {
         uid: cred.user.uid,
         department: data.department as any,
-        grade: data.graduationStatus === "졸업반" ? 3 : 0,
+        grade: data.graduationStatus === "졸업예정" ? 3 : 0,
         graduationYear: data.graduationStatus === "졸업생"
           ? new Date().getFullYear()
           : new Date().getFullYear() + 1,
