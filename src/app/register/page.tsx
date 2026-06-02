@@ -12,7 +12,7 @@ import { createUserDoc } from "@/lib/firestore";
 
 const studentSchema = z.object({
   department: z.enum(["웹툰스쿨", "비주얼게임컨텐츠스쿨"]),
-  graduationStatus: z.enum(["졸업반", "졸업생"]),
+  graduationStatus: z.enum(["졸업예정", "졸업생"]),
   displayName: z.string().min(2, "이름은 2자 이상이어야 합니다"),
   email: z.string().email("올바른 이메일을 입력하세요"),
   password: z.string().min(8, "비밀번호는 8자 이상이어야 합니다"),
@@ -66,7 +66,7 @@ export default function RegisterPage() {
 
   const studentForm = useForm<StudentForm>({
     resolver: zodResolver(studentSchema),
-    defaultValues: { department: "웹툰스쿨", graduationStatus: "졸업반", agreeTerms: false, agreePrivacy: false },
+    defaultValues: { department: "웹툰스쿨", graduationStatus: "졸업예정", agreeTerms: false, agreePrivacy: false },
   });
 
   const companyForm = useForm<CompanyForm>({
@@ -92,7 +92,7 @@ export default function RegisterPage() {
       await upsertStudentProfile(cred.user.uid, {
         uid: cred.user.uid,
         department: data.department as any,
-        grade: data.graduationStatus === "졸업반" ? 3 : 0,
+        grade: data.graduationStatus === "졸업예정" ? 3 : 0,
         graduationYear: data.graduationStatus === "졸업생" ? new Date().getFullYear() : new Date().getFullYear() + 1,
         bio: "",
         skills: [],
@@ -208,7 +208,7 @@ export default function RegisterPage() {
             <div style={sectionStyle}>
               <h3 style={sectionTitleStyle}>졸업 상태</h3>
               <div style={{ display: "flex", gap: 10 }}>
-                {["졸업반", "졸업생"].map((s) => (
+                {["졸업예정", "졸업생"].map((s) => (
                   <button key={s} type="button"
                     onClick={() => studentForm.setValue("graduationStatus", s as any)}
                     style={{
@@ -218,7 +218,7 @@ export default function RegisterPage() {
                       color: studentForm.watch("graduationStatus") === s ? "#818cf8" : "#9999bb",
                       fontWeight: 600, fontSize: 14,
                     }}>
-                    {s === "졸업반" ? "🎓 졸업반" : "✅ 졸업생"}
+                    {s === "졸업예정" ? "🎓 졸업예정" : "✅ 졸업생"}
                   </button>
                 ))}
               </div>
