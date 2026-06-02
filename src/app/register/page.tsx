@@ -112,14 +112,19 @@ export default function RegisterPage() {
           isApproved: true,
           isActive: true,
         });
-        const { upsertStudentProfile } = await import("@/lib/firestore");
-        await upsertStudentProfile(cred.user.uid, {
-          uid: cred.user.uid,
-          department: data.department as any,
-          grade: data.graduationStatus === "졸업예정" ? 3 : 0,
-          graduationYear: data.graduationStatus === "졸업생" ? new Date().getFullYear() : new Date().getFullYear() + 1,
-          bio: "", skills: [], snsLinks: {}, isPublic: false, viewCount: 0, badges: [],
-        });
+try {
+  const { upsertStudentProfile } = await import("@/lib/firestore");
+  await upsertStudentProfile(cred.user.uid, {
+    uid: cred.user.uid,
+    department: data.department as any,
+    grade: data.graduationStatus === "졸업예정" ? 3 : 0,
+    graduationYear: data.graduationStatus === "졸업생" ? new Date().getFullYear() : new Date().getFullYear() + 1,
+    bio: "", skills: [], snsLinks: {}, isPublic: false, viewCount: 0, badges: [],
+  });
+} catch(profileError) {
+  console.error("프로필 생성 오류 (무시):", profileError);
+}
+       
         toast.success("가입 완료! 대시보드로 이동합니다.");
         router.push("/dashboard/student");
       }
