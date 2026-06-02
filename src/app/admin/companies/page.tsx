@@ -124,6 +124,7 @@ export default function AdminCompaniesPage() {
               {paginated.length === 0 && <p style={{ color:"#55556e", textAlign:"center", padding:40 }}>기업이 없습니다.</p>}
             </div>
 
+            {/* 페이지네이션 */}
             {totalPages > 1 && (
               <div style={{ display:"flex", justifyContent:"center", gap:8 }}>
                 <button onClick={() => setPage((p) => Math.max(1, p-1))} disabled={page===1}
@@ -142,6 +143,7 @@ export default function AdminCompaniesPage() {
         )}
       </div>
 
+      {/* 상세 모달 */}
       {selected && (
         <div onClick={() => setSelected(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:16, maxWidth:600, width:"100%", maxHeight:"85vh", overflow:"auto", padding:32 }}>
@@ -154,6 +156,7 @@ export default function AdminCompaniesPage() {
               <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:"#55556e", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
 
+            {/* 상세 정보 */}
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:24 }}>
               {[
                 { label:"담당자", value:selected.displayName||"-" },
@@ -170,6 +173,7 @@ export default function AdminCompaniesPage() {
               ))}
             </div>
 
+            {/* 액션 버튼 */}
             <div style={{ display:"flex", gap:8, marginBottom:24 }}>
               <button onClick={() => toggleApprove(selected.id, selected.isApproved)}
                 style={{ flex:1, padding:"10px 0", borderRadius:8, fontWeight:700, fontSize:14, border:"none", cursor:"pointer",
@@ -183,6 +187,7 @@ export default function AdminCompaniesPage() {
               </button>
             </div>
 
+            {/* 관심 포트폴리오 현황 */}
             <div>
               <h3 style={{ fontSize:15, fontWeight:700, color:"#818cf8", marginBottom:16 }}>관심 포트폴리오 ({savedList.length})</h3>
               {savedLoading ? <p style={{ color:"#55556e" }}>⏳ 불러오는 중...</p>
