@@ -98,7 +98,6 @@ export default function RegisterPage() {
           role: "professor",
           profileImage: "",
           isApproved: true,
-          isActive: true,
         });
         toast.success("교수 계정으로 가입 완료!");
         router.push("/dashboard/professor");
