@@ -63,7 +63,19 @@ export default function HomePage() {
           getDoc(doc(db,"settings","main")),
           getDocs(query(collection(db,"notices"), orderBy("createdAt","desc"), limit(3))),
         ]);
-        setWorks(wSnap.docs.map((d) => ({id:d.id,...d.data()}as Work)));
+
+// 변경 후
+const uSnap2 = await getDocs(collection(db, "users"));
+const activeUids2 = new Set(
+  uSnap2.docs
+    .filter((d) => d.data().isActive !== false)
+    .map((d) => d.id)
+);
+setWorks(
+  wSnap.docs
+    .map((d) => ({ id:d.id, ...d.data() } as Work))
+    .filter((w) => activeUids2.has(w.authorUid))
+);        
         setHeroImages(hSnap.docs.map((d) => ({url:d.data().url as string, workId:d.data().workId as string|undefined})));
         setNotices(nSnap.docs.map((d) => ({id:d.id,...d.data()}as Notice)));
         if (sSnap.exists()) { const data=sSnap.data(); applySettings(data); localStorage.setItem(CACHE_KEY,JSON.stringify(data)); }
