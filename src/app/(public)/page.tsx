@@ -11,7 +11,7 @@ import Script from "next/script";
 const CACHE_KEY = "hero_settings_cache";
 const DEFAULT_STATS = [{value:"120+",label:"등록 학생"},{value:"850+",label:"등록 작품"},{value:"30+",label:"협력 기업"},{value:"95%",label:"취업 연계율"}];
 
-interface Work { id:string; title:string; category:string|string[]; images:string[]; authorUid:string; tools:string[]; viewCount:number; }
+interface Work { id:string; title:string; category:string|string[]; images:string[]; authorName:string; authorUid:string; viewCount:number; }
 interface Notice { id:string; title:string; content:string; }
 interface HeroImage { url:string; workId?:string; }
 
