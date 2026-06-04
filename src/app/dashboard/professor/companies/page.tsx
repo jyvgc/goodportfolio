@@ -129,8 +129,12 @@ export default function ProfessorCompaniesPage() {
                 <div key={c.id}
                   style={{ background:"#111118", border:`1px solid ${selected?.id===c.id?"#6366f1":"#2e2e3f"}`, borderRadius:10, padding:"14px 20px", display:"flex", alignItems:"center", gap:16, flexWrap:"wrap", cursor:"pointer" }}
                   onClick={() => openDetail(c)}>
-                  <div style={{ width:44, height:44, borderRadius:10, flexShrink:0, background:"linear-gradient(135deg,#22d3ee,#0891b2)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:18, color:"white" }}>
-                    {c.companyName?.charAt(0)||"🏢"}
+<div style={{ width:44, height:44, borderRadius:10, flexShrink:0, overflow:"hidden", background:"linear-gradient(135deg,#22d3ee,#0891b2)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:18, color:"white" }}>
+  {c.profileImage
+    ? <img src={c.profileImage} alt={c.companyName} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+    : (c.companyName?.charAt(0) || "🏢")
+  }
+</div>
                   </div>
                   <div style={{ flex:1, minWidth:140 }}>
                     <div style={{ fontWeight:700, fontSize:15 }}>{c.companyName || "(회사명 없음)"}</div>
