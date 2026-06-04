@@ -6,7 +6,8 @@ import { db } from "@/lib/firebase";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
-interface Work { id:string; title:string; category:string|string[]; images:string[]; authorName:string; viewCount:number; }
+// 변경 후
+interface Work { id:string; title:string; category:string|string[]; images:string[]; authorName:string; authorUid:string; viewCount:number; }
 
 export default function GalleryPage() {
   const [works, setWorks] = useState<Work[]>([]);
