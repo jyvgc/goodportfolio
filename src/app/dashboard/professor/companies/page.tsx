@@ -11,7 +11,7 @@ import Link from "next/link";
 interface Company {
   id: string; displayName: string; email: string; companyName: string;
   industry: string; companySize: string; phone: string; website: string;
-  isApproved: boolean; createdAt: any;
+  isApproved: boolean; createdAt: any; profileImage?: string;
 }
 
 interface SavedPortfolio {
@@ -30,7 +30,7 @@ export default function ProfessorCompaniesPage() {
   const [selected, setSelected] = useState<Company | null>(null);
   const [savedList, setSavedList] = useState<SavedPortfolio[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
-  const [savedCounts, setSavedCounts] = useState<Record<string, number>>({}); // ① 추가
+  const [savedCounts, setSavedCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!loading && !firebaseUser) { router.push("/login"); return; }
@@ -40,10 +40,10 @@ export default function ProfessorCompaniesPage() {
 
   const fetchData = async () => {
     try {
-      const [uSnap, pSnap, savedSnap] = await Promise.all([  // ② savedSnap 추가
+      const [uSnap, pSnap, savedSnap] = await Promise.all([
         getDocs(collection(db, "users")),
         getDocs(collection(db, "companyProfiles")),
-        getDocs(collection(db, "savedPortfolios")),           // ② 추가
+        getDocs(collection(db, "savedPortfolios")),
       ]);
       const profiles: Record<string, any> = {};
       pSnap.docs.forEach((d) => { profiles[d.id] = d.data(); });
@@ -54,7 +54,6 @@ export default function ProfessorCompaniesPage() {
         .sort((a: any, b: any) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
       setCompanies(list);
 
-      // ③ 집계
       const counts: Record<string, number> = {};
       savedSnap.docs.forEach((d) => {
         const uid = d.data().companyUid as string;
@@ -129,12 +128,11 @@ export default function ProfessorCompaniesPage() {
                 <div key={c.id}
                   style={{ background:"#111118", border:`1px solid ${selected?.id===c.id?"#6366f1":"#2e2e3f"}`, borderRadius:10, padding:"14px 20px", display:"flex", alignItems:"center", gap:16, flexWrap:"wrap", cursor:"pointer" }}
                   onClick={() => openDetail(c)}>
-<div style={{ width:44, height:44, borderRadius:10, flexShrink:0, overflow:"hidden", background:"linear-gradient(135deg,#22d3ee,#0891b2)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:18, color:"white" }}>
-  {c.profileImage
-    ? <img src={c.profileImage} alt={c.companyName} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-    : (c.companyName?.charAt(0) || "🏢")
-  }
-</div>
+                  <div style={{ width:44, height:44, borderRadius:10, flexShrink:0, overflow:"hidden", background:"linear-gradient(135deg,#22d3ee,#0891b2)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:18, color:"white" }}>
+                    {c.profileImage
+                      ? <img src={c.profileImage} alt={c.companyName} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                      : (c.companyName?.charAt(0) || "🏢")
+                    }
                   </div>
                   <div style={{ flex:1, minWidth:140 }}>
                     <div style={{ fontWeight:700, fontSize:15 }}>{c.companyName || "(회사명 없음)"}</div>
@@ -144,7 +142,6 @@ export default function ProfessorCompaniesPage() {
                     </div>
                   </div>
 
-                  {/* ④ 관심 포트폴리오 수 뱃지 */}
                   <div style={{ display:"flex", alignItems:"center" }}>
                     {savedCounts[c.id] ? (
                       <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"4px 12px", borderRadius:999, fontSize:12, fontWeight:700, background:"rgba(99,102,241,0.15)", color:"#818cf8", whiteSpace:"nowrap" }}>
@@ -190,7 +187,6 @@ export default function ProfessorCompaniesPage() {
         )}
       </div>
 
-      {/* 상세 모달 */}
       {selected && (
         <div onClick={() => setSelected(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:16, maxWidth:600, width:"100%", maxHeight:"85vh", overflow:"auto", padding:32 }}>
