@@ -77,13 +77,21 @@ export default function StudentDashboard() {
                       ? <img src={w.images[0]} alt={w.title} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                       : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:32 }}>🎨</div>}
                   </div>
-                  <div style={{ padding:14 }}>
-                    <div style={{ fontWeight:700, fontSize:14, color:"#f0f0ff", marginBottom:6, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{w.title}</div>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <span style={{ fontSize:11, padding:"2px 8px", borderRadius:999, background:"rgba(99,102,241,0.15)", color:"#818cf8" }}>{cat(w.category)}</span>
-                      <span style={{ fontSize:11, color:w.isPublic?"#10b981":"#55556e" }}>{w.isPublic?"공개":"비공개"}</span>
-                    </div>
-                  </div>
+
+<div style={{ padding:14 }}>
+  <div style={{ fontWeight:700, fontSize:14, color:"#f0f0ff", marginBottom:6, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{w.title}</div>
+  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+    <span style={{ fontSize:11, padding:"2px 8px", borderRadius:999, background:"rgba(99,102,241,0.15)", color:"#818cf8" }}>{cat(w.category)}</span>
+    <span style={{ fontSize:11, color:w.isPublic?"#10b981":"#55556e" }}>{w.isPublic?"공개":"비공개"}</span>
+  </div>
+  <Link href={`/dashboard/student/works/${w.id}/edit`}
+    onClick={(e) => e.stopPropagation()}
+    style={{ display:"block", textAlign:"center", padding:"6px 0", borderRadius:6, background:"rgba(99,102,241,0.15)", color:"#818cf8", textDecoration:"none", fontSize:12, fontWeight:600 }}>
+    ✏️ 수정
+  </Link>
+</div>
+
+                  
                 </div>
               </Link>
             ))}
