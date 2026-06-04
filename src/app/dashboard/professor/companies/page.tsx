@@ -30,6 +30,7 @@ export default function ProfessorCompaniesPage() {
   const [selected, setSelected] = useState<Company | null>(null);
   const [savedList, setSavedList] = useState<SavedPortfolio[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
+  const [savedCounts, setSavedCounts] = useState<Record<string, number>>({}); // ① 추가
 
   useEffect(() => {
     if (!loading && !firebaseUser) { router.push("/login"); return; }
@@ -39,9 +40,10 @@ export default function ProfessorCompaniesPage() {
 
   const fetchData = async () => {
     try {
-      const [uSnap, pSnap] = await Promise.all([
+      const [uSnap, pSnap, savedSnap] = await Promise.all([  // ② savedSnap 추가
         getDocs(collection(db, "users")),
         getDocs(collection(db, "companyProfiles")),
+        getDocs(collection(db, "savedPortfolios")),           // ② 추가
       ]);
       const profiles: Record<string, any> = {};
       pSnap.docs.forEach((d) => { profiles[d.id] = d.data(); });
@@ -51,6 +53,14 @@ export default function ProfessorCompaniesPage() {
         .map((u: any) => ({ ...u, ...profiles[u.id] }))
         .sort((a: any, b: any) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
       setCompanies(list);
+
+      // ③ 집계
+      const counts: Record<string, number> = {};
+      savedSnap.docs.forEach((d) => {
+        const uid = d.data().companyUid as string;
+        if (uid) counts[uid] = (counts[uid] ?? 0) + 1;
+      });
+      setSavedCounts(counts);
     } catch(e) { console.error(e); }
     finally { setDataLoading(false); }
   };
@@ -129,6 +139,18 @@ export default function ProfessorCompaniesPage() {
                       {c.industry||"-"} · {c.companySize||"-"} · 가입 {fmt(c.createdAt)}
                     </div>
                   </div>
+
+                  {/* ④ 관심 포트폴리오 수 뱃지 */}
+                  <div style={{ display:"flex", alignItems:"center" }}>
+                    {savedCounts[c.id] ? (
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"4px 12px", borderRadius:999, fontSize:12, fontWeight:700, background:"rgba(99,102,241,0.15)", color:"#818cf8", whiteSpace:"nowrap" }}>
+                        ♥ {savedCounts[c.id]}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize:12, color:"#3d3d52", padding:"4px 12px" }}>♥ 0</span>
+                    )}
+                  </div>
+
                   <div style={{ display:"flex", gap:8 }} onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => toggleApprove(c.id, c.isApproved)}
                       style={{ padding:"6px 16px", borderRadius:999, fontWeight:700, fontSize:12, border:"none", cursor:"pointer",
@@ -179,10 +201,10 @@ export default function ProfessorCompaniesPage() {
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:24 }}>
               {[
-                { label:"담당자",   value:selected.displayName||"-" },
-                { label:"업종",     value:(selected as any).industry||"-" },
+                { label:"담당자",    value:selected.displayName||"-" },
+                { label:"업종",      value:(selected as any).industry||"-" },
                 { label:"회사 규모", value:(selected as any).companySize||"-" },
-                { label:"전화",     value:(selected as any).phone||"-" },
+                { label:"전화",      value:(selected as any).phone||"-" },
                 { label:"홈페이지", value:(selected as any).website||"-" },
                 { label:"승인 상태", value:selected.isApproved?"✅ 승인됨":"❌ 미승인" },
               ].map((item) => (
@@ -229,4 +251,3 @@ export default function ProfessorCompaniesPage() {
     </div>
   );
 }
-
