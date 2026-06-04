@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { collection, query, where, orderBy, limit, getDocs, getDoc, doc } from "firebase/firestore";
+import { collection, query, where, getDocs, getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuthStore } from "@/store/authStore";
 import Script from "next/script";
@@ -13,7 +13,7 @@ const DEFAULT_STATS = [{value:"120+",label:"등록 학생"},{value:"850+",label:
 
 interface Work { id:string; title:string; category:string|string[]; images:string[]; authorName:string; authorUid:string; viewCount:number; }
 interface Notice { id:string; title:string; content:string; }
-interface HeroImage { url:string; workId?:string; }
+interface HeroImage { url:string; workId:string; title:string; order:number; }
 
 export default function HomePage() {
   const { firebaseUser, userDoc } = useAuthStore();
@@ -37,7 +37,7 @@ export default function HomePage() {
   const [slideIndex, setSlideIndex] = useState(0);
   const slideTimer = useRef<any>(null);
 
-  const applySettings = (d: Record<string,any>) => {
+  const applySettings = (d: Record<string,any>, skipStats = false) => {
     if (d.heroTitle) setHeroTitle(d.heroTitle);
     if (d.heroSubtitle) setHeroSubtitle(d.heroSubtitle);
     if (d.heroTagline) setHeroTagline(d.heroTagline);
@@ -49,37 +49,71 @@ export default function HomePage() {
     if (d.maxWidth) setMaxWidth(d.maxWidth);
     if (d.ctaText) setCtaText(d.ctaText);
     if (d.categories) setCategories(["ALL",...d.categories]);
-    if (d.stats) setStats([{value:d.stats.students,label:"등록 학생"},{value:d.stats.works,label:"등록 작품"},{value:d.stats.companies,label:"협력 기업"},{value:d.stats.employment,label:"취업 연계율"}]);
+    // 수동 모드일 때만 stats 적용 (실시간은 별도 처리)
+    if (!skipStats && d.stats && d.statsMode !== "live") {
+      setStats([
+        {value:d.stats.students, label:"등록 학생"},
+        {value:d.stats.works,    label:"등록 작품"},
+        {value:d.stats.companies,label:"협력 기업"},
+        {value:d.stats.employment,label:"취업 연계율"},
+      ]);
+    }
+    // ② settings에서 히어로 이미지 불러오기 (순서 반영)
+    if (d.heroImages?.length) {
+      const sorted = [...d.heroImages].sort((a:any,b:any) => a.order - b.order);
+      setHeroImages(sorted);
+    }
   };
 
   useEffect(() => {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) { try { applySettings(JSON.parse(cached)); } catch {} setIsLoaded(true); }
+
     (async () => {
       try {
-        const wq = query(collection(db,"works"), where("isPublic","==",true), orderBy("createdAt","desc"), limit(24));
-        const [wSnap,hSnap,sSnap,nSnap] = await Promise.all([
-          getDocs(wq), getDocs(collection(db,"heroImages")),
+        const [wSnap, sSnap, nSnap, uSnap] = await Promise.all([
+          getDocs(query(collection(db,"works"), where("isPublic","==",true))),
           getDoc(doc(db,"settings","main")),
-          getDocs(query(collection(db,"notices"), orderBy("createdAt","desc"), limit(3))),
+          getDocs(collection(db,"notices")),
+          getDocs(collection(db,"users")),
         ]);
 
-// 변경 후
-const uSnap2 = await getDocs(collection(db, "users"));
-const activeUids2 = new Set(
-  uSnap2.docs
-    .filter((d) => d.data().isActive !== false)
-    .map((d) => d.id)
-);
-setWorks(
-  wSnap.docs
-    .map((d) => ({ id:d.id, ...d.data() } as Work))
-    .filter((w) => activeUids2.has(w.authorUid))
-);        
-        setHeroImages(hSnap.docs.map((d) => ({url:d.data().url as string, workId:d.data().workId as string|undefined})));
-        setNotices(nSnap.docs.map((d) => ({id:d.id,...d.data()}as Notice)));
-        if (sSnap.exists()) { const data=sSnap.data(); applySettings(data); localStorage.setItem(CACHE_KEY,JSON.stringify(data)); }
-      } catch(e){console.error(e);} finally { setIsLoaded(true); }
+        // 비활성화 학생 필터
+        const activeUids = new Set(
+          uSnap.docs.filter((d) => d.data().isActive !== false).map((d) => d.id)
+        );
+        const workList = wSnap.docs
+          .map((d) => ({id:d.id,...d.data()} as Work))
+          .filter((w) => activeUids.has(w.authorUid))
+          .sort((a:any,b:any) => (b.createdAt?.seconds??0)-(a.createdAt?.seconds??0));
+        setWorks(workList);
+
+        setNotices(nSnap.docs
+          .map((d) => ({id:d.id,...d.data()} as Notice))
+          .sort((a:any,b:any) => (b as any).createdAt?.seconds-(a as any).createdAt?.seconds)
+          .slice(0,3));
+
+        if (sSnap.exists()) {
+          const data = sSnap.data();
+          applySettings(data, data.statsMode === "live");
+
+          // ① 실시간 통계
+          if (data.statsMode === "live") {
+            const students = uSnap.docs.filter((d) => d.data().role==="student").length;
+            const companies = uSnap.docs.filter((d) => d.data().role==="company").length;
+            const works = wSnap.size;
+            setStats([
+              {value:`${students}`, label:"등록 학생"},
+              {value:`${works}`,    label:"등록 작품"},
+              {value:`${companies}`,label:"협력 기업"},
+              {value:data.stats?.employment ?? "95%", label:"취업 연계율"},
+            ]);
+          }
+
+          localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        }
+      } catch(e) { console.error(e); }
+      finally { setIsLoaded(true); }
     })();
   }, []);
 
@@ -90,9 +124,10 @@ setWorks(
     }
   }, [heroType, heroImages]);
 
-  const gridImages: HeroImage[] = heroImages.length>0
+  // ② settings의 heroImages 우선, 없으면 작품 목록에서 자동 생성
+  const gridImages: HeroImage[] = heroImages.length > 0
     ? heroImages
-    : works.map((w) => ({url:w.images?.[0],workId:w.id})).filter((x) => x.url) as HeroImage[];
+    : works.slice(0,9).map((w) => ({url:w.images?.[0]??"", workId:w.id, title:w.title, order:0}));
 
   const filtered = selectedCategory==="ALL" ? works : works.filter((w) =>
     Array.isArray(w.category) ? w.category.includes(selectedCategory) : w.category===selectedCategory
@@ -103,11 +138,13 @@ setWorks(
   const isStudent = firebaseUser && userDoc?.role==="student";
   const cardStyle = (extra?:React.CSSProperties):React.CSSProperties => ({borderRadius:br,overflow:"hidden",background:"#1a1a24",border:`1px solid ${bc}`,...extra});
 
+  // ③ 히어로 이미지 - workId 있으면 클릭시 작품 페이지로
   const HeroImg = ({ img, style }:{ img:HeroImage; style:React.CSSProperties }) => {
     const inner = img.url
-      ? <img src={img.url} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} />
+      ? <img src={img.url} alt={img.title||""} style={{ width:"100%",height:"100%",objectFit:"cover" }} />
       : <div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:0.3,fontSize:48 }}>🎨</div>;
-    if (img.workId) return <Link href={`/work/${img.workId}`} style={{ display:"block",...style,textDecoration:"none" }}>{inner}</Link>;
+    if (img.workId)
+      return <Link href={`/work/${img.workId}`} style={{ display:"block",...style,textDecoration:"none" }}>{inner}</Link>;
     return <div style={style}>{inner}</div>;
   };
 
@@ -151,23 +188,22 @@ setWorks(
             <div>
               {heroType==="grid" && (
                 <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gridTemplateRows:"repeat(3,160px)",gap:10 }}>
-                  <HeroImg img={gridImages[0]??{url:""}} style={{...cardStyle(),gridColumn:"1 / span 2",gridRow:"1 / span 2"}} />
-                  {[1,2,3,4,5].map((i) => <HeroImg key={i} img={gridImages[i]??{url:""}} style={{...cardStyle(),...(i===4?{gridColumn:"2 / span 2"}:{})}} />)}
+                  <HeroImg img={gridImages[0]??{url:"",workId:"",title:"",order:0}} style={{...cardStyle(),gridColumn:"1 / span 2",gridRow:"1 / span 2"}} />
+                  {[1,2,3,4,5].map((i) => <HeroImg key={i} img={gridImages[i]??{url:"",workId:"",title:"",order:i}} style={{...cardStyle(),...(i===4?{gridColumn:"2 / span 2"}:{})}} />)}
                 </div>
               )}
               {heroType==="square" && (
                 <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10 }}>
-                  {Array.from({length:9}).map((_,i) => <HeroImg key={i} img={gridImages[i]??{url:""}} style={{...cardStyle(),aspectRatio:"1"}} />)}
+                  {Array.from({length:9}).map((_,i) => <HeroImg key={i} img={gridImages[i]??{url:"",workId:"",title:"",order:i}} style={{...cardStyle(),aspectRatio:"1"}} />)}
                 </div>
               )}
               {heroType==="slide" && (
                 <div style={{ position:"relative",...cardStyle({height:480}) }}>
                   {gridImages.length>0
-                    ? gridImages[slideIndex]?.workId
-                      ? <Link href={`/work/${gridImages[slideIndex].workId}`} style={{ display:"block",width:"100%",height:"100%" }}>
-                          <img src={gridImages[slideIndex].url} alt="" style={{ width:"100%",height:"100%",objectFit:"cover",transition:"opacity 0.5s" }} />
-                        </Link>
-                      : <img src={gridImages[slideIndex]?.url} alt="" style={{ width:"100%",height:"100%",objectFit:"cover",transition:"opacity 0.5s" }} />
+                    ? <Link href={gridImages[slideIndex]?.workId ? `/work/${gridImages[slideIndex].workId}` : "#"}
+                        style={{ display:"block",width:"100%",height:"100%",textDecoration:"none" }}>
+                        <img src={gridImages[slideIndex]?.url} alt={gridImages[slideIndex]?.title||""} style={{ width:"100%",height:"100%",objectFit:"cover",transition:"opacity 0.5s" }} />
+                      </Link>
                     : <div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:0.2,fontSize:64 }}>🎨</div>}
                   {gridImages.length>1 && (
                     <div style={{ position:"absolute",bottom:16,left:"50%",transform:"translateX(-50%)",display:"flex",gap:6 }}>
