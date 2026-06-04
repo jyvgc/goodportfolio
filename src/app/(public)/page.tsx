@@ -125,10 +125,14 @@ export default function HomePage() {
   }, [heroType, heroImages]);
 
   // ② settings의 heroImages 우선, 없으면 작품 목록에서 자동 생성
-  const gridImages: HeroImage[] = heroImages.length > 0
-    ? heroImages
-    : works.slice(0,9).map((w) => ({url:w.images?.[0]??"", workId:w.id, title:w.title, order:0}));
+  // const gridImages: HeroImage[] = heroImages.length > 0
+  //  ? heroImages
+  //  : works.slice(0,9).map((w) => ({url:w.images?.[0]??"", workId:w.id, title:w.title, order:0}));
+  
+// 변경 후 - heroImages 없으면 빈 배열 (추천 설정한 것만 표시)
+const gridImages: HeroImage[] = heroImages;
 
+  
   const filtered = selectedCategory==="ALL" ? works : works.filter((w) =>
     Array.isArray(w.category) ? w.category.includes(selectedCategory) : w.category===selectedCategory
   );
