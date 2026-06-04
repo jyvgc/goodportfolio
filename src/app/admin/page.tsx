@@ -27,7 +27,7 @@ export default function AdminDashboard() {
         getDocs(collection(db,"works")),
         getDocs(collection(db,"offers")),
         getDocs(query(collection(db,"users"), where("role","==","company"), where("isApproved","==",false))),
-        getDocs(collection(db,"professorInvites")),
+        getDocs(query(collection(db,"users"), where("role","==","professor"))),
       ]);
       const pendingOffers = o.docs.filter(d => !d.data().adminApproved && d.data().status !== "admin_rejected").length;
       setStats({ students:s.size, companies:c.size, works:w.size, offers:o.size, pendingCompanies:pc.size, pendingOffers, professors:prof.size });
