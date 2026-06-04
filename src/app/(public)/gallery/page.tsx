@@ -22,10 +22,19 @@ export default function GalleryPage() {
           getDocs(query(collection(db,"works"), where("isPublic","==",true))),
           getDoc(doc(db,"settings","main")),
         ]);
-        const list = wSnap.docs
-          .map((d) => ({ id:d.id, ...d.data() } as Work))
-          .sort((a:any,b:any) => (b.createdAt?.seconds??0)-(a.createdAt?.seconds??0));
-        setWorks(list);
+        
+        // 변경 후
+const uSnap = await getDocs(collection(db, "users"));
+const activeUids = new Set(
+  uSnap.docs
+    .filter((d) => d.data().isActive !== false)
+    .map((d) => d.id)
+);
+const list = wSnap.docs
+  .map((d) => ({ id:d.id, ...d.data() } as Work))
+  .filter((w) => activeUids.has(w.authorUid))
+  .sort((a:any,b:any) => (b.createdAt?.seconds??0)-(a.createdAt?.seconds??0));
+setWorks(list);        
         // ① 관리자 설정 카테고리 불러오기
         if (sSnap.exists() && sSnap.data().categories?.length) {
           setCategories(["ALL", ...sSnap.data().categories]);
