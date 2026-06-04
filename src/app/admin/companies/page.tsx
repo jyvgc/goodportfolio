@@ -9,6 +9,7 @@ interface Company {
   id: string; displayName: string; email: string; companyName: string;
   industry: string; companySize: string; phone: string; website: string;
   isApproved: boolean; createdAt: any;
+    profileImage?: string; // ← 추가
 }
 
 interface SavedPortfolio {
