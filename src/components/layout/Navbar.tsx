@@ -86,10 +86,10 @@ export default function Navbar() {
           <div style={{ width:32, height:32, borderRadius:10, background:"linear-gradient(135deg,#6366f1,#22d3ee)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <span style={{ color:"white", fontWeight:900, fontSize:14 }}>G</span>
           </div>
-          //타이틀 제목 바꾸기
-          //<span style={{ fontWeight:800, fontSize:18, color:"#f0f0ff" }}>Good<span style={{ background:"linear-gradient(135deg,#6366f1,#22d3ee)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Portfolio</span></span>
+
+
           <span style={{ fontWeight:800, fontSize:18, color:"#f0f0ff" }}>GMU Game Webtoon<span style={{ background:"linear-gradient(135deg,#6366f1,#22d3ee)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Portfolio</span></span>
-          //타이틀 제목 바꾸기
+
         </Link>
 
         <div style={{ display:"flex", alignItems:"center", gap:4 }} className="desktop-nav">
