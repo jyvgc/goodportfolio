@@ -16,7 +16,7 @@ interface Notice { id:string; title:string; content:string; }
 interface HeroImage { url:string; workId:string; title:string; order:number; }
 
 export default function HomePage() {
-  const { firebaseUser, userDoc } = useAuthStore();
+  const { firebaseUser, userDoc, loading } = useAuthStore();
   const [works, setWorks] = useState<Work[]>([]);
   const [heroImages, setHeroImages] = useState<HeroImage[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -37,6 +37,10 @@ export default function HomePage() {
   const [slideIndex, setSlideIndex] = useState(0);
   const slideTimer = useRef<any>(null);
 
+  // 로그인 여부 (auth 로딩 완료 후 판단)
+  const isLoggedIn = !loading && !!firebaseUser;
+  const isStudent = isLoggedIn && userDoc?.role === "student";
+
   const applySettings = (d: Record<string,any>, skipStats = false) => {
     if (d.heroTitle) setHeroTitle(d.heroTitle);
     if (d.heroSubtitle) setHeroSubtitle(d.heroSubtitle);
@@ -49,7 +53,6 @@ export default function HomePage() {
     if (d.maxWidth) setMaxWidth(d.maxWidth);
     if (d.ctaText) setCtaText(d.ctaText);
     if (d.categories) setCategories(["ALL",...d.categories]);
-    // 수동 모드일 때만 stats 적용 (실시간은 별도 처리)
     if (!skipStats && d.stats && d.statsMode !== "live") {
       setStats([
         {value:d.stats.students, label:"등록 학생"},
@@ -58,7 +61,6 @@ export default function HomePage() {
         {value:d.stats.employment,label:"취업 연계율"},
       ]);
     }
-    // ② settings에서 히어로 이미지 불러오기 (순서 반영)
     if (d.heroImages?.length) {
       const sorted = [...d.heroImages].sort((a:any,b:any) => a.order - b.order);
       setHeroImages(sorted);
@@ -78,7 +80,6 @@ export default function HomePage() {
           getDocs(collection(db,"users")),
         ]);
 
-        // 비활성화 학생 필터
         const activeUids = new Set(
           uSnap.docs.filter((d) => d.data().isActive !== false).map((d) => d.id)
         );
@@ -96,8 +97,6 @@ export default function HomePage() {
         if (sSnap.exists()) {
           const data = sSnap.data();
           applySettings(data, data.statsMode === "live");
-
-          // ① 실시간 통계
           if (data.statsMode === "live") {
             const students = uSnap.docs.filter((d) => d.data().role==="student").length;
             const companies = uSnap.docs.filter((d) => d.data().role==="company").length;
@@ -109,7 +108,6 @@ export default function HomePage() {
               {value:data.stats?.employment ?? "95%", label:"취업 연계율"},
             ]);
           }
-
           localStorage.setItem(CACHE_KEY, JSON.stringify(data));
         }
       } catch(e) { console.error(e); }
@@ -124,25 +122,16 @@ export default function HomePage() {
     }
   }, [heroType, heroImages]);
 
-  // ② settings의 heroImages 우선, 없으면 작품 목록에서 자동 생성
-  // const gridImages: HeroImage[] = heroImages.length > 0
-  //  ? heroImages
-  //  : works.slice(0,9).map((w) => ({url:w.images?.[0]??"", workId:w.id, title:w.title, order:0}));
-  
-// 변경 후 - heroImages 없으면 빈 배열 (추천 설정한 것만 표시)
-const gridImages: HeroImage[] = heroImages;
+  const gridImages: HeroImage[] = heroImages;
 
-  
   const filtered = selectedCategory==="ALL" ? works : works.filter((w) =>
     Array.isArray(w.category) ? w.category.includes(selectedCategory) : w.category===selectedCategory
   );
   const br = borderRadius==="rounded" ? 14 : 0;
   const bc = borderColor==="transparent" ? "transparent" : borderColor;
   const mw = maxWidth==="100%" ? "100%" : `${maxWidth}px`;
-  const isStudent = firebaseUser && userDoc?.role==="student";
   const cardStyle = (extra?:React.CSSProperties):React.CSSProperties => ({borderRadius:br,overflow:"hidden",background:"#1a1a24",border:`1px solid ${bc}`,...extra});
 
-  // ③ 히어로 이미지 - workId 있으면 클릭시 작품 페이지로
   const HeroImg = ({ img, style }:{ img:HeroImage; style:React.CSSProperties }) => {
     const inner = img.url
       ? <img src={img.url} alt={img.title||""} style={{ width:"100%",height:"100%",objectFit:"cover" }} />
@@ -158,6 +147,8 @@ const gridImages: HeroImage[] = heroImages;
     <div style={{ minHeight:"100vh", backgroundColor:"#0a0a0f", color:"#f0f0ff" }}>
       <Script id="json-ld" type="application/ld+json" dangerouslySetInnerHTML={{ __html:JSON.stringify(jsonLd) }} />
       <Navbar />
+
+      {/* ── 히어로 (모든 방문자 공통) ── */}
       <section style={{ minHeight:"100vh",paddingTop:80,position:"relative",overflow:"hidden",background:"linear-gradient(135deg,#0a0a0f 0%,#1a1a2e 50%,#16213e 100%)",opacity:isLoaded?1:0,transition:"opacity 0.3s ease-in" }}>
         <div style={{ position:"absolute",top:"30%",left:"40%",width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,rgba(99,102,241,0.12) 0%,transparent 70%)",pointerEvents:"none" }} />
         <div style={{ maxWidth:mw,margin:"0 auto",padding:"60px 24px 40px" }}>
@@ -174,11 +165,18 @@ const gridImages: HeroImage[] = heroImages;
               </h1>
               <p style={{ color:"#9999bb",fontSize:17,lineHeight:1.7,marginBottom:40,maxWidth:420 }}>{heroDescription}</p>
               <div style={{ display:"flex",gap:16,flexWrap:"wrap",marginBottom:56 }}>
-                <Link href="/gallery" style={{ background:"#6366f1",color:"white",padding:"12px 32px",borderRadius:8,fontWeight:600,textDecoration:"none",fontSize:15 }}>포트폴리오 보기 →</Link>
-                {isStudent
-                  ? <Link href="/dashboard/student/works/new" style={{ background:"linear-gradient(135deg,#10b981,#059669)",color:"white",padding:"12px 32px",borderRadius:8,fontWeight:600,textDecoration:"none",fontSize:15 }}>🎨 작품 등록</Link>
-                  : !firebaseUser ? <Link href="/register" style={{ border:"1px solid #3d3d52",color:"#9999bb",padding:"12px 32px",borderRadius:8,fontWeight:600,textDecoration:"none",fontSize:15 }}>회원가입</Link>
-                  : null}
+                {/* 비로그인: 로그인/가입 버튼, 로그인: 갤러리/작품등록 버튼 */}
+                {!firebaseUser && !loading ? (
+                  <>
+                    <Link href="/login" style={{ background:"#6366f1",color:"white",padding:"12px 32px",borderRadius:8,fontWeight:600,textDecoration:"none",fontSize:15 }}>로그인</Link>
+                    <Link href="/register" style={{ border:"1px solid #3d3d52",color:"#9999bb",padding:"12px 32px",borderRadius:8,fontWeight:600,textDecoration:"none",fontSize:15 }}>회원가입</Link>
+                  </>
+                ) : isLoggedIn ? (
+                  <>
+                    <Link href="/gallery" style={{ background:"#6366f1",color:"white",padding:"12px 32px",borderRadius:8,fontWeight:600,textDecoration:"none",fontSize:15 }}>포트폴리오 보기 →</Link>
+                    {isStudent && <Link href="/dashboard/student/works/new" style={{ background:"linear-gradient(135deg,#10b981,#059669)",color:"white",padding:"12px 32px",borderRadius:8,fontWeight:600,textDecoration:"none",fontSize:15 }}>🎨 작품 등록</Link>}
+                  </>
+                ) : null}
               </div>
               <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:24,borderTop:"1px solid #2e2e3f",paddingTop:32 }}>
                 {stats.map((s) => (
@@ -221,6 +219,7 @@ const gridImages: HeroImage[] = heroImages;
         </div>
       </section>
 
+      {/* ── 공지사항 (모든 방문자 공통) ── */}
       {notices.length>0 && (
         <section style={{ background:"#111118",borderTop:"1px solid #1a1a24",borderBottom:"1px solid #1a1a24" }}>
           <div style={{ maxWidth:mw,margin:"0 auto",padding:"24px 24px" }}>
@@ -241,72 +240,77 @@ const gridImages: HeroImage[] = heroImages;
         </section>
       )}
 
-      <section style={{ maxWidth:mw,margin:"0 auto",padding:"80px 24px" }}>
-        <div style={{ display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:48,flexWrap:"wrap",gap:16 }}>
-          <div>
-            <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:12 }}><div style={{ width:32,height:1,background:"#6366f1" }} /><span style={{ color:"#818cf8",fontSize:11,fontWeight:600,letterSpacing:"0.2em",textTransform:"uppercase" }}>Latest Works</span></div>
-            <h2 style={{ fontSize:36,fontWeight:900,lineHeight:1.2 }}>주목할 만한<br /><span style={{ background:"linear-gradient(135deg,#6366f1,#22d3ee)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>포트폴리오</span></h2>
-          </div>
-          <Link href="/gallery" style={{ color:"#9999bb",textDecoration:"none",fontSize:14 }}>전체 보기 →</Link>
-        </div>
-        <div style={{ display:"flex",gap:8,marginBottom:40,overflowX:"auto",paddingBottom:8 }}>
-          {categories.map((c) => <button key={c} onClick={() => setSelectedCategory(c)} style={{ flexShrink:0,padding:"8px 20px",borderRadius:999,fontSize:13,fontWeight:600,border:selectedCategory===c?"none":`1px solid ${bc}`,background:selectedCategory===c?"#6366f1":"#111118",color:selectedCategory===c?"white":"#9999bb",cursor:"pointer" }}>{c}</button>)}
-        </div>
-        {filtered.length===0
-          ? <div style={{ textAlign:"center",padding:"80px 0" }}><div style={{ fontSize:48,marginBottom:16 }}>🎨</div><p style={{ color:"#9999bb" }}>첫 번째 작품을 등록해 보세요!</p></div>
-          : <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:16 }}>
-              {filtered.slice(0,12).map((w) => (
-                <Link key={w.id} href={`/work/${w.id}`} style={{ textDecoration:"none" }}>
-                  <div style={{ background:"#111118",border:`1px solid ${bc}`,borderRadius:br,overflow:"hidden",cursor:"pointer",transition:"all 0.3s" }}
-                    onMouseEnter={(e) => {(e.currentTarget as HTMLElement).style.transform="translateY(-4px)";(e.currentTarget as HTMLElement).style.boxShadow="0 8px 40px rgba(99,102,241,0.2)";}}
-                    onMouseLeave={(e) => {(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
-                    <div style={{ aspectRatio:"1",background:"#1a1a24",overflow:"hidden" }}>
-                      {w.images?.[0]?<img src={w.images[0]} alt={w.title} style={{ width:"100%",height:"100%",objectFit:"cover" }} />:<div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32 }}>🎨</div>}
-                    </div>
-                    <div style={{ padding:14 }}>
-                      <div style={{ fontWeight:700,fontSize:14,color:"#f0f0ff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{w.title}</div>
-                      <span style={{ fontSize:11,padding:"2px 8px",borderRadius:999,background:"rgba(99,102,241,0.15)",color:"#818cf8",border:"1px solid rgba(99,102,241,0.3)" }}>{Array.isArray(w.category)?w.category[0]:w.category}</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>}
-      </section>
-
-      <section style={{ background:"#111118",borderTop:`1px solid ${bc}`,borderBottom:`1px solid ${bc}` }}>
-        <div style={{ maxWidth:mw,margin:"0 auto",padding:"80px 24px" }}>
-          <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:16 }}><div style={{ width:32,height:1,background:"#6366f1" }} /><span style={{ color:"#818cf8",fontSize:11,fontWeight:600,letterSpacing:"0.2em",textTransform:"uppercase" }}>How It Works</span></div>
-          <h2 style={{ fontSize:36,fontWeight:900,marginBottom:56 }}>3단계로 <span style={{ background:"linear-gradient(135deg,#6366f1,#22d3ee)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>채용까지</span></h2>
-          <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24 }} className="how-grid">
-            {[{step:"01",icon:"🎨",title:"포트폴리오 등록",desc:"작품을 업로드하고 나만의 포트폴리오 페이지를 만드세요"},{step:"02",icon:"🔍",title:"기업이 발견",desc:"산업체 인사 담당자가 갤러리에서 당신의 작품을 발견합니다"},{step:"03",icon:"💼",title:"채용 연결",desc:"채용 제안을 받고 꿈의 기업에 지원하세요"}].map((item) => (
-              <div key={item.step} style={{ background:"#1a1a24",border:`1px solid ${bc}`,borderRadius:br,padding:32,position:"relative",overflow:"hidden" }}>
-                <div style={{ position:"absolute",top:16,right:20,fontSize:56,fontWeight:900,color:"#2e2e3f" }}>{item.step}</div>
-                <div style={{ fontSize:36,marginBottom:16 }}>{item.icon}</div>
-                <div style={{ fontWeight:700,fontSize:17,marginBottom:8 }}>{item.title}</div>
-                <div style={{ color:"#9999bb",fontSize:14,lineHeight:1.6 }}>{item.desc}</div>
+      {/* ── 로그인 사용자에게만 표시되는 영역 ── */}
+      {isLoggedIn && (
+        <>
+          {/* 최신 작품 갤러리 */}
+          <section style={{ maxWidth:mw,margin:"0 auto",padding:"80px 24px" }}>
+            <div style={{ display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:48,flexWrap:"wrap",gap:16 }}>
+              <div>
+                <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:12 }}><div style={{ width:32,height:1,background:"#6366f1" }} /><span style={{ color:"#818cf8",fontSize:11,fontWeight:600,letterSpacing:"0.2em",textTransform:"uppercase" }}>Latest Works</span></div>
+                <h2 style={{ fontSize:36,fontWeight:900,lineHeight:1.2 }}>주목할 만한<br /><span style={{ background:"linear-gradient(135deg,#6366f1,#22d3ee)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>포트폴리오</span></h2>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+              <Link href="/gallery" style={{ color:"#9999bb",textDecoration:"none",fontSize:14 }}>전체 보기 →</Link>
+            </div>
+            <div style={{ display:"flex",gap:8,marginBottom:40,overflowX:"auto",paddingBottom:8 }}>
+              {categories.map((c) => <button key={c} onClick={() => setSelectedCategory(c)} style={{ flexShrink:0,padding:"8px 20px",borderRadius:999,fontSize:13,fontWeight:600,border:selectedCategory===c?"none":`1px solid ${bc}`,background:selectedCategory===c?"#6366f1":"#111118",color:selectedCategory===c?"white":"#9999bb",cursor:"pointer" }}>{c}</button>)}
+            </div>
+            {filtered.length===0
+              ? <div style={{ textAlign:"center",padding:"80px 0" }}><div style={{ fontSize:48,marginBottom:16 }}>🎨</div><p style={{ color:"#9999bb" }}>첫 번째 작품을 등록해 보세요!</p></div>
+              : <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:16 }}>
+                  {filtered.slice(0,12).map((w) => (
+                    <Link key={w.id} href={`/work/${w.id}`} style={{ textDecoration:"none" }}>
+                      <div style={{ background:"#111118",border:`1px solid ${bc}`,borderRadius:br,overflow:"hidden",cursor:"pointer",transition:"all 0.3s" }}
+                        onMouseEnter={(e) => {(e.currentTarget as HTMLElement).style.transform="translateY(-4px)";(e.currentTarget as HTMLElement).style.boxShadow="0 8px 40px rgba(99,102,241,0.2)";}}
+                        onMouseLeave={(e) => {(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+                        <div style={{ aspectRatio:"1",background:"#1a1a24",overflow:"hidden" }}>
+                          {w.images?.[0]?<img src={w.images[0]} alt={w.title} style={{ width:"100%",height:"100%",objectFit:"cover" }} />:<div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32 }}>🎨</div>}
+                        </div>
+                        <div style={{ padding:14 }}>
+                          <div style={{ fontWeight:700,fontSize:14,color:"#f0f0ff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{w.title}</div>
+                          <span style={{ fontSize:11,padding:"2px 8px",borderRadius:999,background:"rgba(99,102,241,0.15)",color:"#818cf8",border:"1px solid rgba(99,102,241,0.3)" }}>{Array.isArray(w.category)?w.category[0]:w.category}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>}
+          </section>
 
-      <section style={{ maxWidth:mw,margin:"0 auto",padding:"80px 24px" }}>
-        <div style={{ background:"#111118",border:`1px solid ${bc}`,borderRadius:br+8,padding:"80px 40px",textAlign:"center",position:"relative",overflow:"hidden" }}>
-          <div style={{ position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:400,height:400,borderRadius:"50%",background:"radial-gradient(circle,rgba(99,102,241,0.1) 0%,transparent 70%)",pointerEvents:"none" }} />
-          <div style={{ position:"relative",zIndex:1 }}>
-            <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:24 }}>
-              <div style={{ width:32,height:1,background:"#6366f1" }} /><span style={{ color:"#818cf8",fontSize:11,fontWeight:600,letterSpacing:"0.2em",textTransform:"uppercase" }}>Join Us</span><div style={{ width:32,height:1,background:"#6366f1" }} />
+          {/* How It Works */}
+          <section style={{ background:"#111118",borderTop:`1px solid ${bc}`,borderBottom:`1px solid ${bc}` }}>
+            <div style={{ maxWidth:mw,margin:"0 auto",padding:"80px 24px" }}>
+              <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:16 }}><div style={{ width:32,height:1,background:"#6366f1" }} /><span style={{ color:"#818cf8",fontSize:11,fontWeight:600,letterSpacing:"0.2em",textTransform:"uppercase" }}>How It Works</span></div>
+              <h2 style={{ fontSize:36,fontWeight:900,marginBottom:56 }}>3단계로 <span style={{ background:"linear-gradient(135deg,#6366f1,#22d3ee)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>채용까지</span></h2>
+              <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24 }} className="how-grid">
+                {[{step:"01",icon:"🎨",title:"포트폴리오 등록",desc:"작품을 업로드하고 나만의 포트폴리오 페이지를 만드세요"},{step:"02",icon:"🔍",title:"기업이 발견",desc:"산업체 인사 담당자가 갤러리에서 당신의 작품을 발견합니다"},{step:"03",icon:"💼",title:"채용 연결",desc:"채용 제안을 받고 꿈의 기업에 지원하세요"}].map((item) => (
+                  <div key={item.step} style={{ background:"#1a1a24",border:`1px solid ${bc}`,borderRadius:br,padding:32,position:"relative",overflow:"hidden" }}>
+                    <div style={{ position:"absolute",top:16,right:20,fontSize:56,fontWeight:900,color:"#2e2e3f" }}>{item.step}</div>
+                    <div style={{ fontSize:36,marginBottom:16 }}>{item.icon}</div>
+                    <div style={{ fontWeight:700,fontSize:17,marginBottom:8 }}>{item.title}</div>
+                    <div style={{ color:"#9999bb",fontSize:14,lineHeight:1.6 }}>{item.desc}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <h2 style={{ fontSize:40,fontWeight:900,marginBottom:16,lineHeight:1.2 }}>지금 바로<br /><span style={{ background:"linear-gradient(135deg,#6366f1,#22d3ee)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>포트폴리오를 만들어보세요</span></h2>
-            <p style={{ color:"#9999bb",marginBottom:40,fontSize:16 }}>{ctaText}</p>
-            <div style={{ display:"flex",gap:16,justifyContent:"center",flexWrap:"wrap" }}>
-              {!firebaseUser
-                ? <><Link href="/register" style={{ background:"#6366f1",color:"white",padding:"14px 40px",borderRadius:8,fontWeight:600,textDecoration:"none",fontSize:15 }}>학생으로 가입하기</Link><Link href="/register" style={{ border:"1px solid #3d3d52",color:"#9999bb",padding:"14px 40px",borderRadius:8,fontWeight:600,textDecoration:"none",fontSize:15 }}>기업으로 가입하기</Link></>
-                : <Link href="/gallery" style={{ background:"#6366f1",color:"white",padding:"14px 40px",borderRadius:8,fontWeight:600,textDecoration:"none",fontSize:15 }}>갤러리 둘러보기 →</Link>}
+          </section>
+
+          {/* Join Us CTA */}
+          <section style={{ maxWidth:mw,margin:"0 auto",padding:"80px 24px" }}>
+            <div style={{ background:"#111118",border:`1px solid ${bc}`,borderRadius:br+8,padding:"80px 40px",textAlign:"center",position:"relative",overflow:"hidden" }}>
+              <div style={{ position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:400,height:400,borderRadius:"50%",background:"radial-gradient(circle,rgba(99,102,241,0.1) 0%,transparent 70%)",pointerEvents:"none" }} />
+              <div style={{ position:"relative",zIndex:1 }}>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:24 }}>
+                  <div style={{ width:32,height:1,background:"#6366f1" }} /><span style={{ color:"#818cf8",fontSize:11,fontWeight:600,letterSpacing:"0.2em",textTransform:"uppercase" }}>Join Us</span><div style={{ width:32,height:1,background:"#6366f1" }} />
+                </div>
+                <h2 style={{ fontSize:40,fontWeight:900,marginBottom:16,lineHeight:1.2 }}>지금 바로<br /><span style={{ background:"linear-gradient(135deg,#6366f1,#22d3ee)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>포트폴리오를 만들어보세요</span></h2>
+                <p style={{ color:"#9999bb",marginBottom:40,fontSize:16 }}>{ctaText}</p>
+                <Link href="/gallery" style={{ background:"#6366f1",color:"white",padding:"14px 40px",borderRadius:8,fontWeight:600,textDecoration:"none",fontSize:15 }}>갤러리 둘러보기 →</Link>
+              </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
+        </>
+      )}
+
       <Footer />
       <style>{`@media(max-width:900px){.hero-grid{grid-template-columns:1fr !important;}}@media(max-width:640px){.how-grid{grid-template-columns:1fr !important;}}`}</style>
     </div>
