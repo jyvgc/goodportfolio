@@ -7,6 +7,8 @@ import { collection, query, where, getDocs, getDoc, doc } from "firebase/firesto
 import { db } from "@/lib/firebase";
 import { useAuthStore } from "@/store/authStore";
 import Script from "next/script";
+// 상단 import에 추가
+import LoginForm from "@/components/auth/LoginForm";
 
 const CACHE_KEY = "hero_settings_cache";
 const DEFAULT_STATS = [{value:"120+",label:"등록 학생"},{value:"850+",label:"등록 작품"},{value:"30+",label:"협력 기업"},{value:"95%",label:"취업 연계율"}];
@@ -204,34 +206,50 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            <div>
-              {heroType==="grid" && (
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gridTemplateRows:"repeat(3,160px)",gap:10 }}>
-                  <HeroImg img={gridImages[0]??{url:"",workId:"",title:"",order:0}} style={{...cardStyle(),gridColumn:"1 / span 2",gridRow:"1 / span 2"}} />
-                  {[1,2,3,4,5].map((i) => <HeroImg key={i} img={gridImages[i]??{url:"",workId:"",title:"",order:i}} style={{...cardStyle(),...(i===4?{gridColumn:"2 / span 2"}:{})}} />)}
-                </div>
-              )}
-              {heroType==="square" && (
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10 }}>
-                  {Array.from({length:9}).map((_,i) => <HeroImg key={i} img={gridImages[i]??{url:"",workId:"",title:"",order:i}} style={{...cardStyle(),aspectRatio:"1"}} />)}
-                </div>
-              )}
-              {heroType==="slide" && (
-                <div style={{ position:"relative",...cardStyle({height:480}) }}>
-                  {gridImages.length>0
-                    ? <Link href={gridImages[slideIndex]?.workId ? `/work/${gridImages[slideIndex].workId}` : "#"}
-                        style={{ display:"block",width:"100%",height:"100%",textDecoration:"none" }}>
-                        <img src={gridImages[slideIndex]?.url} alt={gridImages[slideIndex]?.title||""} style={{ width:"100%",height:"100%",objectFit:"cover",transition:"opacity 0.5s" }} />
-                      </Link>
-                    : <div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:0.2,fontSize:64 }}>🎨</div>}
-                  {gridImages.length>1 && (
-                    <div style={{ position:"absolute",bottom:16,left:"50%",transform:"translateX(-50%)",display:"flex",gap:6 }}>
-                      {gridImages.map((_,i) => <button key={i} onClick={() => setSlideIndex(i)} style={{ width:i===slideIndex?20:6,height:6,borderRadius:999,background:i===slideIndex?"#6366f1":"rgba(255,255,255,0.3)",border:"none",cursor:"pointer",transition:"all 0.3s",padding:0 }} />)}
-                    </div>
-                  )}
-                </div>
-              )}
+
+         {/* 히어로 우측 — 비로그인: 로그인폼 / 로그인: 기존 그리드 */}
+<div>
+  {!firebaseUser && !loading ? (
+    // 비로그인: 로그인 폼 카드
+    <div style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:16, padding:"40px 36px", backdropFilter:"blur(10px)" }}>
+      <LoginForm />
+    </div>
+  ) : (
+    // 로그인: 히어로 이미지 그리드
+    <>
+      {heroType==="grid" && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gridTemplateRows:"repeat(3,160px)", gap:10 }}>
+          <HeroImg img={gridImages[0]??{url:"",workId:"",title:"",order:0}} style={{...cardStyle(), gridColumn:"1 / span 2", gridRow:"1 / span 2"}} />
+          {[1,2,3,4,5].map((i) => <HeroImg key={i} img={gridImages[i]??{url:"",workId:"",title:"",order:i}} style={{...cardStyle(),...(i===4?{gridColumn:"2 / span 2"}:{})}} />)}
+        </div>
+      )}
+      {heroType==="square" && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
+          {Array.from({length:9}).map((_,i) => <HeroImg key={i} img={gridImages[i]??{url:"",workId:"",title:"",order:i}} style={{...cardStyle(), aspectRatio:"1"}} />)}
+        </div>
+      )}
+      {heroType==="slide" && (
+        <div style={{ position:"relative",...cardStyle({height:480}) }}>
+          {gridImages.length>0
+            ? <Link href={gridImages[slideIndex]?.workId ? `/work/${gridImages[slideIndex].workId}` : "#"}
+                style={{ display:"block", width:"100%", height:"100%", textDecoration:"none" }}>
+                <img src={gridImages[slideIndex]?.url} alt={gridImages[slideIndex]?.title||""} style={{ width:"100%", height:"100%", objectFit:"cover", transition:"opacity 0.5s" }} />
+              </Link>
+            : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", opacity:0.2, fontSize:64 }}>🎨</div>}
+          {gridImages.length>1 && (
+            <div style={{ position:"absolute", bottom:16, left:"50%", transform:"translateX(-50%)", display:"flex", gap:6 }}>
+              {gridImages.map((_,i) => <button key={i} onClick={() => setSlideIndex(i)} style={{ width:i===slideIndex?20:6, height:6, borderRadius:999, background:i===slideIndex?"#6366f1":"rgba(255,255,255,0.3)", border:"none", cursor:"pointer", transition:"all 0.3s", padding:0 }} />)}
             </div>
+          )}
+        </div>
+      )}
+    </>
+  )}
+</div>
+  
+
+
+            
           </div>
         </div>
       </section>
