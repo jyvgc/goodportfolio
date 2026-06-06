@@ -68,18 +68,19 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) { try { applySettings(JSON.parse(cached)); } catch {} setIsLoaded(true); }
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) { try { applySettings(JSON.parse(cached)); } catch {} setIsLoaded(true); }
 
-    (async () => {
-      try {
+  (async () => {
+    try {
+      if (firebaseUser) {
+        // 로그인 사용자: 전체 조회
         const [wSnap, sSnap, nSnap, uSnap] = await Promise.all([
           getDocs(query(collection(db,"works"), where("isPublic","==",true))),
           getDoc(doc(db,"settings","main")),
           getDocs(collection(db,"notices")),
           getDocs(collection(db,"users")),
         ]);
-
         const activeUids = new Set(
           uSnap.docs.filter((d) => d.data().isActive !== false).map((d) => d.id)
         );
@@ -100,20 +101,36 @@ export default function HomePage() {
           if (data.statsMode === "live") {
             const students = uSnap.docs.filter((d) => d.data().role==="student").length;
             const companies = uSnap.docs.filter((d) => d.data().role==="company").length;
-            const works = wSnap.size;
             setStats([
               {value:`${students}`, label:"등록 학생"},
-              {value:`${works}`,    label:"등록 작품"},
-              {value:`${companies}`,label:"협력 기업"},
+              {value:`${wSnap.size}`, label:"등록 작품"},
+              {value:`${companies}`, label:"협력 기업"},
               {value:data.stats?.employment ?? "95%", label:"취업 연계율"},
             ]);
           }
           localStorage.setItem(CACHE_KEY, JSON.stringify(data));
         }
-      } catch(e) { console.error(e); }
-      finally { setIsLoaded(true); }
-    })();
-  }, []);
+      } else {
+        // 비로그인: settings + notices만 조회
+        const [sSnap, nSnap] = await Promise.all([
+          getDoc(doc(db,"settings","main")),
+          getDocs(collection(db,"notices")),
+        ]);
+        setNotices(nSnap.docs
+          .map((d) => ({id:d.id,...d.data()} as Notice))
+          .sort((a:any,b:any) => (b as any).createdAt?.seconds-(a as any).createdAt?.seconds)
+          .slice(0,3));
+        if (sSnap.exists()) {
+          const data = sSnap.data();
+          applySettings(data);
+          localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        }
+      }
+    } catch(e) { console.error(e); }
+    finally { setIsLoaded(true); }
+  })();
+}, [firebaseUser]); // ← firebaseUser 의존성 추가
+
 
   useEffect(() => {
     if (heroType==="slide" && gridImages.length>1) {
