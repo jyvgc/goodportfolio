@@ -88,7 +88,7 @@ export default function Navbar() {
           </div>
 
 
-          <span style={{ fontWeight:800, fontSize:18, color:"#f0f0ff" }}>GMU Game Webtoon<span style={{ background:"linear-gradient(135deg,#6366f1,#22d3ee)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Portfolio</span></span>
+          <span style={{ fontWeight:800, fontSize:18, color:"#f0f0ff" }}>GMU Game Webtoon{' '}<span style={{ background:"linear-gradient(135deg,#6366f1,#22d3ee)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Portfolio</span></span>
 
         </Link>
 
