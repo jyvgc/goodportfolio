@@ -208,14 +208,7 @@ export default function HomePage() {
             </div>
 
          {/* 히어로 우측 — 비로그인: 로그인폼 / 로그인: 기존 그리드 */}
-<div>
-//  {!firebaseUser && !loading ? (
-    // 비로그인: 로그인 폼 카드
-//    <div style={{ background:"#111118", border:"1px solid #2e2e3f", borderRadius:16, padding:"40px 36px", backdropFilter:"blur(10px)" }}>
-//      <LoginForm />
-//    </div>
-//  ) : (
-    // 로그인: 히어로 이미지 그리드
+
 <div>
   {heroType==="grid" && (
     <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gridTemplateRows:"repeat(3,160px)",gap:10 }}>
