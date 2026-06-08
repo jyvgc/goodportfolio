@@ -90,8 +90,8 @@ export default function Navbar() {
 
 <span style={{ fontWeight: 800, fontSize: 18, color: "#f0f0ff" }}> Game Webtoon{' '}
     <span style={{ background: "linear-gradient(135deg,#6366f1,#22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-    Portfolio
-
+    Portfolio</span>
+</span>
         </Link>
 
         <div style={{ display:"flex", alignItems:"center", gap:4 }} className="desktop-nav">
