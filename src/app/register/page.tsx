@@ -173,7 +173,7 @@ const onStudentSubmit = async (data: StudentForm) => {
 
         {/* 교수 안내 */}
         <div style={{ background:"rgba(168,85,247,0.08)", border:"1px solid rgba(168,85,247,0.2)", borderRadius:10, padding:"10px 16px", marginBottom:20, fontSize:13, color:"#a855f7" }}>
-          👨‍🏫 
+          👨‍🏫 가입 후 승인절차로 인하여 잠시 후부터 이용 가능합니다.
         </div>
 
         <div style={{ display:"flex", background:"#111118", borderRadius:12, padding:4, marginBottom:32, border:"1px solid #2e2e3f" }}>
@@ -271,7 +271,7 @@ const onStudentSubmit = async (data: StudentForm) => {
         {role === "company" && (
           <form onSubmit={companyForm.handleSubmit(onCompanySubmit)}>
             <div style={{ background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.2)", borderRadius:10, padding:"12px 16px", marginBottom:20, fontSize:13, color:"#f59e0b" }}>
-              ℹ️ 기업 계정은 관리자 승인 후 활성화됩니다. (영업일 1~2일 소요)
+              ℹ️ 기업 계정은 관리자 승인 후 활성화됩니다.
             </div>
 
             <div style={sectionStyle}>
