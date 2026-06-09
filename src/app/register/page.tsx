@@ -11,6 +11,7 @@ import { auth } from "@/lib/firebase";
 import { createUserDoc } from "@/lib/firestore";
 import { getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { notifyAdmin } from "@/lib/notify"; // ← 추가
 
 const studentSchema = z.object({
   department: z.enum(["웹툰스쿨", "비주얼게임컨텐츠스쿨"]),
@@ -73,56 +74,55 @@ export default function RegisterPage() {
     defaultValues: { industry:"", companySize:"", agreeTerms:false, agreePrivacy:false },
   });
 
-  // 교수 초대 이메일인지 확인
   const checkProfessorInvite = async (email: string) => {
     const docId = email.replace(/[.@]/g, "_");
     const snap = await getDoc(doc(db, "professorInvites", docId));
     return snap.exists() ? snap.data() : null;
   };
-const onStudentSubmit = async (data: StudentForm) => {
-  try {
-    setLoading(true);
-    const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
-    await updateProfile(cred.user, { displayName: data.displayName });
-    await createUserDoc(cred.user.uid, {
-      uid: cred.user.uid,
-      email: data.email,
-      displayName: data.displayName,
-      role: "student",
-      profileImage: "",
-      isApproved: true,
-    });
-    // upsertStudentProfile 실패해도 가입은 성공으로 처리
+
+  const onStudentSubmit = async (data: StudentForm) => {
     try {
-      const { upsertStudentProfile } = await import("@/lib/firestore");
-      await upsertStudentProfile(cred.user.uid, {
+      setLoading(true);
+      const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      await updateProfile(cred.user, { displayName: data.displayName });
+      await createUserDoc(cred.user.uid, {
         uid: cred.user.uid,
-        department: data.department as any,
-        grade: data.graduationStatus === "졸업예정" ? 3 : 0,
-        graduationYear: data.graduationStatus === "졸업생"
-          ? new Date().getFullYear()
-          : new Date().getFullYear() + 1,
-        bio: "", skills: [], snsLinks: {},
-        isPublic: false, viewCount: 0, badges: [],
+        email: data.email,
+        displayName: data.displayName,
+        role: "student",
+        profileImage: "",
+        isApproved: true,
       });
-    } catch(e) {
-      console.error("프로필 생성 오류:", e);
-    }
-    toast.success("가입 완료! 대시보드로 이동합니다.");
-    router.push("/dashboard/student");
-  } catch (e: any) {
-    if (e.code === "auth/email-already-in-use") toast.error("이미 사용 중인 이메일입니다.");
-    else toast.error("회원가입에 실패했습니다.");
-  } finally { setLoading(false); }
-};
+      try {
+        const { upsertStudentProfile } = await import("@/lib/firestore");
+        await upsertStudentProfile(cred.user.uid, {
+          uid: cred.user.uid,
+          department: data.department as any,
+          grade: data.graduationStatus === "졸업예정" ? 3 : 0,
+          graduationYear: data.graduationStatus === "졸업생"
+            ? new Date().getFullYear()
+            : new Date().getFullYear() + 1,
+          bio: "", skills: [], snsLinks: {},
+          isPublic: false, viewCount: 0, badges: [],
+        });
+      } catch(e) { console.error("프로필 생성 오류:", e); }
 
+      // ✅ 텔레그램 알림
+      await notifyAdmin(
+        `🎨 <b>새 학생 가입</b>\n` +
+        `이름: ${data.displayName}\n` +
+        `이메일: ${data.email}\n` +
+        `학과: ${data.department} / ${data.graduationStatus}\n\n` +
+        `👉 <a href="https://goodportfolio-five.vercel.app/admin/students">학생 관리 바로가기</a>`
+      );
 
-
-
-
-
-  
-
+      toast.success("가입 완료! 대시보드로 이동합니다.");
+      router.push("/dashboard/student");
+    } catch (e: any) {
+      if (e.code === "auth/email-already-in-use") toast.error("이미 사용 중인 이메일입니다.");
+      else toast.error("회원가입에 실패했습니다.");
+    } finally { setLoading(false); }
+  };
 
   const onCompanySubmit = async (data: CompanyForm) => {
     try {
@@ -141,6 +141,18 @@ const onStudentSubmit = async (data: StudentForm) => {
         contactPerson: data.displayName, title: data.title, phone: data.phone,
         savedStudents: [], createdAt: serverTimestamp(),
       });
+
+      // ✅ 텔레그램 알림
+      await notifyAdmin(
+        `🏢 <b>새 기업 가입 (승인 필요)</b>\n` +
+        `회사명: ${data.companyName}\n` +
+        `업종: ${data.industry} / ${data.companySize}\n` +
+        `담당자: ${data.displayName} (${data.title})\n` +
+        `이메일: ${data.email}\n` +
+        `전화: ${data.phone}\n\n` +
+        `👉 <a href="https://goodportfolio-five.vercel.app/admin/companies">기업 관리 바로가기</a>`
+      );
+
       toast.success("기업 계정 신청 완료! 관리자 승인 후 이용 가능합니다.");
       router.push("/auth/pending");
     } catch (e: any) {
@@ -171,7 +183,6 @@ const onStudentSubmit = async (data: StudentForm) => {
         <h1 style={{ fontSize:26, fontWeight:800, textAlign:"center", marginBottom:6 }}>회원가입</h1>
         <p style={{ color:"#55556e", fontSize:14, textAlign:"center", marginBottom:32 }}>계정 유형을 선택해 주세요</p>
 
-        {/* 교수 안내 */}
         <div style={{ background:"rgba(168,85,247,0.08)", border:"1px solid rgba(168,85,247,0.2)", borderRadius:10, padding:"10px 16px", marginBottom:20, fontSize:13, color:"#a855f7" }}>
           👨‍🏫 가입 후 승인절차로 인하여 잠시 후부터 이용 가능합니다.
         </div>
@@ -187,7 +198,6 @@ const onStudentSubmit = async (data: StudentForm) => {
           ))}
         </div>
 
-        {/* 학생 폼 */}
         {role === "student" && (
           <form onSubmit={studentForm.handleSubmit(onStudentSubmit)}>
             <div style={sectionStyle}>
@@ -267,7 +277,6 @@ const onStudentSubmit = async (data: StudentForm) => {
           </form>
         )}
 
-        {/* 기업 폼 */}
         {role === "company" && (
           <form onSubmit={companyForm.handleSubmit(onCompanySubmit)}>
             <div style={{ background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.2)", borderRadius:10, padding:"12px 16px", marginBottom:20, fontSize:13, color:"#f59e0b" }}>
