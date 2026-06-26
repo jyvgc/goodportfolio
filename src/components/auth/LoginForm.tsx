@@ -7,8 +7,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { getDoc, doc } from "firebase/firestore";  // ← 이메일 로그인에 필요
+import { db } from "@/lib/firebase";               // ← 이메일 로그인에 필요
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+
 
 const schema = z.object({
   email: z.string().email("올바른 이메일을 입력하세요"),
