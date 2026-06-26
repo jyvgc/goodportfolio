@@ -7,8 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { getDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
