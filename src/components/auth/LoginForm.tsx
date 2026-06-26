@@ -56,17 +56,16 @@ export default function LoginForm({ onSuccess }: Props) {
     } finally { setLoading(false); }
   };
 
-  const handleGoogle = async () => {
-    try {
-      setLoading(true);
-      const cred = await loginWithGoogle("student");
-      const snap = await getDoc(doc(db, "users", cred.uid));
-      const role = snap.exists() ? snap.data().role : "student";
-      handleSuccess(role);
-    } catch {
-      toast.error("Google 로그인에 실패했습니다.");
-    } finally { setLoading(false); }
-  };
+const handleGoogle = async () => {
+  try {
+    setLoading(true);
+    await loginWithGoogle("student"); // 리다이렉트 → 페이지 이동됨, 이후 코드 실행 안 됨
+  } catch {
+    toast.error("Google 로그인에 실패했습니다.");
+    setLoading(false);
+  }
+};
+
 
   return (
     <div style={{ width:"100%", maxWidth:420 }}>
