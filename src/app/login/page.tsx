@@ -19,21 +19,6 @@ export default function LoginPage() {
   const router = useRouter();
   const { handleRedirectResult } = useAuth();
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const user = await handleRedirectResult();
-        if (!user) return;
-        const snap = await getDoc(doc(db, "users", user.uid));
-        const role = snap.exists() ? snap.data().role : "student";
-        toast.success("로그인 성공!");
-        router.push(getDashboardPath(role));
-      } catch (e) {
-        console.error(e);
-        toast.error("Google 로그인에 실패했습니다.");
-      }
-    })();
-  }, []);
 
   return (
     <div style={{ minHeight:"100vh", background:"#0a0a0f", display:"flex" }}>
