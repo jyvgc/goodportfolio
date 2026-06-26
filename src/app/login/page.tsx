@@ -1,11 +1,42 @@
 "use client";
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { getDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import toast from "react-hot-toast";
 import LoginForm from "@/components/auth/LoginForm";
 
+const getDashboardPath = (role: string) => {
+  if (role === "admin")     return "/admin";
+  if (role === "company")   return "/dashboard/company";
+  if (role === "professor") return "/dashboard/professor";
+  return "/dashboard/student";
+};
+
 export default function LoginPage() {
+  const router = useRouter();
+  const { handleRedirectResult } = useAuth();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const user = await handleRedirectResult();
+        if (!user) return;
+        const snap = await getDoc(doc(db, "users", user.uid));
+        const role = snap.exists() ? snap.data().role : "student";
+        toast.success("로그인 성공!");
+        router.push(getDashboardPath(role));
+      } catch (e) {
+        console.error(e);
+        toast.error("Google 로그인에 실패했습니다.");
+      }
+    })();
+  }, []);
+
   return (
     <div style={{ minHeight:"100vh", background:"#0a0a0f", display:"flex" }}>
-      {/* 좌측 비주얼 (데스크탑) */}
       <div style={{ flex:1, display:"none", background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)", position:"relative", overflow:"hidden", alignItems:"center", justifyContent:"center", flexDirection:"column", padding:60 }} className="login-visual">
         <div style={{ position:"absolute", top:"30%", left:"50%", transform:"translate(-50%,-50%)", width:400, height:400, borderRadius:"50%", background:"radial-gradient(circle,rgba(99,102,241,0.2) 0%,transparent 70%)" }} />
         <div style={{ position:"relative", textAlign:"center" }}>
@@ -20,7 +51,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* 우측 로그인 폼 */}
       <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:"24px 20px", minHeight:"100vh" }}>
         <div style={{ width:"100%", maxWidth:420 }}>
           <Link href="/" style={{ display:"flex", alignItems:"center", gap:10, textDecoration:"none", marginBottom:40, justifyContent:"center" }}>
