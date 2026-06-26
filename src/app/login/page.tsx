@@ -1,25 +1,8 @@
 "use client";
 import Link from "next/link";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
-import { getDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import toast from "react-hot-toast";
 import LoginForm from "@/components/auth/LoginForm";
 
-const getDashboardPath = (role: string) => {
-  if (role === "admin")     return "/admin";
-  if (role === "company")   return "/dashboard/company";
-  if (role === "professor") return "/dashboard/professor";
-  return "/dashboard/student";
-};
-
 export default function LoginPage() {
-  const router = useRouter();
-  const { handleRedirectResult } = useAuth();
-
-
   return (
     <div style={{ minHeight:"100vh", background:"#0a0a0f", display:"flex" }}>
       <div style={{ flex:1, display:"none", background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)", position:"relative", overflow:"hidden", alignItems:"center", justifyContent:"center", flexDirection:"column", padding:60 }} className="login-visual">
@@ -35,7 +18,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-
       <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:"24px 20px", minHeight:"100vh" }}>
         <div style={{ width:"100%", maxWidth:420 }}>
           <Link href="/" style={{ display:"flex", alignItems:"center", gap:10, textDecoration:"none", marginBottom:40, justifyContent:"center" }}>
