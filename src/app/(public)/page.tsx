@@ -149,10 +149,10 @@ export default function HomePage() {
   const mw = maxWidth==="100%" ? "100%" : `${maxWidth}px`;
   const cardStyle = (extra?:React.CSSProperties):React.CSSProperties => ({borderRadius:br,overflow:"hidden",background:"#1a1a24",border:`1px solid ${bc}`,...extra});
 
- const HeroImg = ({ img, style }:{ img:HeroImage; style:React.CSSProperties }) => {
+const HeroImg = ({ img, style }:{ img:HeroImage; style:React.CSSProperties }) => {
   const inner = img.url
     ? <img src={img.url} alt={img.title||""} style={{ width:"100%",height:"100%",objectFit:"cover" }} />
-    : <div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:0.3,fontSize:48 }}>🎨</div>;
+    : <div style={{ width:"100%", height:"100%", background:"linear-gradient(135deg,#111118,#1a1a24)" }} />; // ← 여기 교체
 
   // 비로그인 방문자는 클릭 불가 (링크 없음)
   if (img.workId && isLoggedIn)
