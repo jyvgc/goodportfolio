@@ -11,7 +11,7 @@ const DEFAULT_CATEGORIES = ["웹툰","게임아트","캐릭터","배경","UI/UX"
 const DEFAULT_TOOLS = ["Photoshop","Illustrator","Clip Studio","Procreate","Blender","Maya","Unity","Figma"];
 
 // ✅ 웹툰 세로 이미지 대응 — 가로/세로 제한 분리
-const MAX_BYTES = 10 * 1024 * 1024; // 10MB (웹툰은 용량이 큼)
+const MAX_BYTES = 5 * 1024 * 1024; // 5MB (Cloudinary 무료 플랜 25GB 스토리지 보호 기준)
 const MAX_WIDTH = 1600;             // 가로는 그대로 제한
 const MAX_HEIGHT = 10000;           // 세로는 웹툰 원고 길이 허용 (최대 1만px)
 
@@ -32,7 +32,7 @@ async function uploadToCloudinary(file: File): Promise<string> {
 
 function validateImage(file: File): Promise<string | null> {
   return new Promise((resolve) => {
-    if (file.size > MAX_BYTES) { resolve(`${file.name}: 파일 크기가 10MB를 초과합니다.`); return; }
+    if (file.size > MAX_BYTES) { resolve(`${file.name}: 파일 크기가 5MB를 초과합니다.`); return; }
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
@@ -187,7 +187,7 @@ export default function NewWorkPage() {
                 <div style={{ color:"#6366f1", fontWeight:600, fontSize:14 }}>클릭하여 이미지 선택</div>
                 <div style={{ color:"#55556e", fontSize:12, marginTop:8 }}>
                   ⚠ 가로 최대 <strong style={{ color:"#9999bb" }}>1600px</strong>,
-                  파일당 <strong style={{ color:"#9999bb" }}>10MB</strong> 이내, 최대 10개<br/>
+                  파일당 <strong style={{ color:"#9999bb" }}>5MB</strong> 이내, 최대 10개<br/>
                   <span style={{ color:"#818cf8" }}>📌 웹툰 등 세로로 긴 이미지도 등록 가능합니다</span>
                 </div>
               </label>
