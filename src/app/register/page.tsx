@@ -9,8 +9,6 @@ import toast from "react-hot-toast";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { createUserDoc } from "@/lib/firestore";
-import { getDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { notifyAdmin } from "@/lib/notify"; // ← 추가
 
 const studentSchema = z.object({
@@ -74,11 +72,6 @@ export default function RegisterPage() {
     defaultValues: { industry:"", companySize:"", agreeTerms:false, agreePrivacy:false },
   });
 
-  const checkProfessorInvite = async (email: string) => {
-    const docId = email.replace(/[.@]/g, "_");
-    const snap = await getDoc(doc(db, "professorInvites", docId));
-    return snap.exists() ? snap.data() : null;
-  };
 
   const onStudentSubmit = async (data: StudentForm) => {
     try {
@@ -107,14 +100,8 @@ export default function RegisterPage() {
         });
       } catch(e) { console.error("프로필 생성 오류:", e); }
 
-      // ✅ 텔레그램 알림
-      await notifyAdmin(
-        `🎨 <b>새 학생 가입</b>\n` +
-        `이름: ${data.displayName}\n` +
-        `이메일: ${data.email}\n` +
-        `학과: ${data.department} / ${data.graduationStatus}\n\n` +
-        `👉 <a href="https://goodportfolio-five.vercel.app/admin/students">학생 관리 바로가기</a>`
-      );
+      // 서버에서 인증된 가입 정보를 확인하고 알림을 보냅니다.
+      await notifyAdmin();
 
       toast.success("가입 완료! 대시보드로 이동합니다.");
       router.push("/dashboard/student");
@@ -142,16 +129,8 @@ export default function RegisterPage() {
         savedStudents: [], createdAt: serverTimestamp(),
       });
 
-      // ✅ 텔레그램 알림
-      await notifyAdmin(
-        `🏢 <b>새 기업 가입 (승인 필요)</b>\n` +
-        `회사명: ${data.companyName}\n` +
-        `업종: ${data.industry} / ${data.companySize}\n` +
-        `담당자: ${data.displayName} (${data.title})\n` +
-        `이메일: ${data.email}\n` +
-        `전화: ${data.phone}\n\n` +
-        `👉 <a href="https://goodportfolio-five.vercel.app/admin/companies">기업 관리 바로가기</a>`
-      );
+      // 서버에서 인증된 가입 정보를 확인하고 알림을 보냅니다.
+      await notifyAdmin();
 
       toast.success("기업 계정 신청 완료! 관리자 승인 후 이용 가능합니다.");
       router.push("/auth/pending");
@@ -184,7 +163,7 @@ export default function RegisterPage() {
         <p style={{ color:"#55556e", fontSize:14, textAlign:"center", marginBottom:32 }}>계정 유형을 선택해 주세요</p>
 
         <div style={{ background:"rgba(168,85,247,0.08)", border:"1px solid rgba(168,85,247,0.2)", borderRadius:10, padding:"10px 16px", marginBottom:20, fontSize:13, color:"#a855f7" }}>
-          👨‍🏫 가입 후 승인절차로 인하여 잠시 후부터 이용 가능합니다.
+          {role === "student" ? "🎓 학생은 가입 후 바로 이용할 수 있습니다." : "🏢 기업은 관리자 승인 후 이용할 수 있습니다."}
         </div>
 
         <div style={{ display:"flex", background:"#111118", borderRadius:12, padding:4, marginBottom:32, border:"1px solid #2e2e3f" }}>

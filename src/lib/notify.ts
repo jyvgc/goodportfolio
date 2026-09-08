@@ -1,12 +1,20 @@
-export async function notifyAdmin(message: string) {
-  const token = process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.NEXT_PUBLIC_TELEGRAM_CHAT_ID;
-  if (!token || !chatId) return;
+import { auth } from "@/lib/firebase";
+
+// Optional argument retained for older callers; messages are never trusted/sent.
+export async function notifyAdmin(_legacyMessage?: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) return;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
   try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    const token = await user.getIdToken();
+    const res = await fetch("/api/registration-notification", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
     });
-  } catch (e) { console.error("알림 전송 실패", e); }
+    if (!res.ok) console.warn("가입은 완료되었지만 관리자 알림이 전송되지 않았습니다.", res.status);
+  } catch {
+    console.warn("가입은 완료되었지만 관리자 알림 요청에 실패했습니다.");
+  } finally { clearTimeout(timeout); }
 }

@@ -13,7 +13,7 @@ export async function getUserDoc(uid: string): Promise<UserDoc | null> {
 
 export async function createUserDoc(uid: string, data: Partial<UserDoc>) {
   await setDoc(doc(db, "users", uid), {
-    ...data, uid, isApproved: false, createdAt: serverTimestamp(),
+    ...data, uid, isApproved: data.role === "student", createdAt: serverTimestamp(),
   });
 }
 
