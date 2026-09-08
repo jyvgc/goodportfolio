@@ -5,12 +5,15 @@ import { collection, addDoc, serverTimestamp, getDoc, doc } from "firebase/fires
 import { db } from "@/lib/firebase";
 import { useAuthStore } from "@/store/authStore";
 import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer"; 
+import Footer from "@/components/layout/Footer";
 
 const DEFAULT_CATEGORIES = ["웹툰","게임아트","캐릭터","배경","UI/UX","3D"];
 const DEFAULT_TOOLS = ["Photoshop","Illustrator","Clip Studio","Procreate","Blender","Maya","Unity","Figma"];
-const MAX_BYTES = 2 * 1024 * 1024; // 2MB
-const MAX_DIM = 1600;
+
+// ✅ 웹툰 세로 이미지 대응 — 가로/세로 제한 분리
+const MAX_BYTES = 5 * 1024 * 1024; // 5MB (웹툰은 용량이 큼)
+const MAX_WIDTH = 1600;             // 가로는 그대로 제한
+const MAX_HEIGHT = 10000;           // 세로는 웹툰 원고 길이 허용 (최대 1만px)
 
 async function uploadToCloudinary(file: File): Promise<string> {
   const data = new FormData();
@@ -22,18 +25,22 @@ async function uploadToCloudinary(file: File): Promise<string> {
   );
   const json = await res.json();
   if (!json.secure_url) throw new Error("Cloudinary upload failed: " + JSON.stringify(json));
-  return json.secure_url as string;
+
+  // ✅ 가로만 1600px로 제한하는 변환 URL 반환 (세로는 비율 유지, 자동 품질 압축)
+  return (json.secure_url as string).replace("/upload/", "/upload/w_1600,c_limit,q_auto/");
 }
 
 function validateImage(file: File): Promise<string | null> {
   return new Promise((resolve) => {
-    if (file.size > MAX_BYTES) { resolve(`${file.name}: 파일 크기가 2MB를 초과합니다.`); return; }
+    if (file.size > MAX_BYTES) { resolve(`${file.name}: 파일 크기가 5MB를 초과합니다.`); return; }
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      if (img.width > MAX_DIM || img.height > MAX_DIM)
-        resolve(`${file.name}: 이미지 크기 ${img.width}×${img.height}px → ${MAX_DIM}×${MAX_DIM}px 이하로 줄여주세요.`);
+      if (img.width > MAX_WIDTH)
+        resolve(`${file.name}: 가로 크기 ${img.width}px → ${MAX_WIDTH}px 이하로 줄여주세요.`);
+      else if (img.height > MAX_HEIGHT)
+        resolve(`${file.name}: 세로 크기 ${img.height}px → ${MAX_HEIGHT}px 이하로 줄여주세요.`);
       else resolve(null);
     };
     img.onerror = () => { URL.revokeObjectURL(url); resolve(`${file.name}: 이미지를 읽을 수 없습니다.`); };
@@ -179,14 +186,18 @@ export default function NewWorkPage() {
                 <div style={{ fontSize:32, marginBottom:8 }}>📁</div>
                 <div style={{ color:"#6366f1", fontWeight:600, fontSize:14 }}>클릭하여 이미지 선택</div>
                 <div style={{ color:"#55556e", fontSize:12, marginTop:8 }}>
-                  ⚠ 최대 <strong style={{ color:"#9999bb" }}>1600×1600px</strong> 이내,
-                  <strong style={{ color:"#9999bb" }}> 2MB</strong> 이내 파일만 가능, 10개 이내
+                  ⚠ 가로 최대 <strong style={{ color:"#9999bb" }}>1600px</strong>,
+                  파일당 <strong style={{ color:"#9999bb" }}>5MB</strong> 이내, 최대 10개<br/>
+                  <span style={{ color:"#818cf8" }}>📌 웹툰 등 세로로 긴 이미지도 등록 가능합니다</span>
                 </div>
               </label>
             </div>
             {previews.length > 0 && (
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:8, marginTop:12 }}>
-                {previews.map((p, i) => <img key={i} src={p} alt="" style={{ width:"100%", aspectRatio:"1", objectFit:"cover", borderRadius:8 }} />)}
+                {previews.map((p, i) => (
+                  <img key={i} src={p} alt=""
+                    style={{ width:"100%", maxHeight:200, objectFit:"contain", borderRadius:8, background:"#0a0a0f" }} />
+                ))}
               </div>
             )}
           </div>
